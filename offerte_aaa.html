@@ -415,18 +415,18 @@ rd.forEach((r,i)=>{
 const stornoFull=sT(r.rc,r.season)+' '+r.rc.payDe;
 const isF=i===0;const rt=r.tot+(isF?xT:0);
 doc.setFillColor(250,250,250);doc.setDrawColor(...ln);doc.setLineWidth(0.3);
-doc.rect(lm,y,tw,6,'FD');
+doc.rect(lm,y,tw,8,'FD');
 doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
-doc.text(r.fullCat,lm+4,y+4.3);
+doc.text(r.fullCat,lm+4,y+5.5);
 const titleW=doc.getTextWidth(r.fullCat);
 const badgeX=lm+4+titleW+3;const badgeW=doc.getTextWidth(r.rate)+6;
 doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.3);
-doc.roundedRect(badgeX,y+1,badgeW,4,1,1,'FD');
+doc.roundedRect(badgeX,y+2,badgeW,4,1,1,'FD');
 doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...gold);
-doc.text(r.rate,badgeX+3,y+4.2);
-y+=8;
+doc.text(r.rate,badgeX+3,y+5.3);
+y+=10;
 doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...mu);
-doc.text(fD(ci)+' \u2013 '+fD(co)+'   \u00b7   '+n+' '+(n===1?'Nacht':'N\u00e4chte'),lm+4,y);y+=8;
+doc.text(fD(ci)+' \u2013 '+fD(co)+'   \u00b7   '+n+' '+(n===1?'Nacht':'N\u00e4chte'),lm+4,y);y+=10;
 const c0=lm,c1=lm+58,c2=210-rm;
 doc.setFillColor(245,245,245);doc.rect(lm,y,tw,5,'F');
 doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...mu);
@@ -479,12 +479,19 @@ doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.
 doc.rect(lm,y,tw,ctaH,'FD');
 doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...gold);
 doc.text(ctaLines,lm+5,y+6);y+=ctaH+10;
-Array.from(letter.querySelectorAll('.lout')).forEach(el=>{
+const loutEls=Array.from(letter.querySelectorAll('.lout'));
+let lastTxt='';
+loutEls.forEach(el=>{
+const txt=el.innerText.trim();
+if(!txt)return;
+// skip if this text was already included in the previous element (duplicate link)
+if(lastTxt&&lastTxt.includes(txt.substring(0,30)))return;
+lastTxt=txt;
 const isSmall=el.style.fontSize&&el.style.fontSize.includes('12');
 doc.setFont('helvetica','normal');doc.setFontSize(isSmall?8:9.5);
 doc.setTextColor(isSmall?150:90,isSmall?150:90,isSmall?150:90);
-const ls=doc.splitTextToSize(el.innerText,tw);
-doc.text(ls,lm,y);y+=ls.length*(isSmall?4:4.8)+5;
+const ls=doc.splitTextToSize(txt,tw);
+doc.text(ls,lm,y);y+=ls.length*(isSmall?4:4.8)+6;
 });
 y+=4;doc.setDrawColor(...ln);doc.setLineWidth(0.4);doc.line(lm,y,210-rm,y);y+=6;
 doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...dk);
