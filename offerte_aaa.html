@@ -380,7 +380,122 @@ ${loutHtml}
     });
   });
 }
-function mkPDF(){const lbl=document.getElementById('plbl');lbl.textContent='Wird erstellt...';const letter=document.getElementById('letterOut');if(!letter.innerHTML){lbl.textContent='PDF speichern';return}const nr=String(oNr).padStart(3,'0');const guest=document.getElementById('gname').value.trim()||'Gast';const n=gN();try{const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const lm=22,tw=166;let y=22;const dk=[25,25,25],gr=[90,90,90],mu=[150,150,150],ln=[220,220,220],gold=[139,105,20];doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(...dk);doc.text('Andermatt Alpine Apartments',lm,y);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...gold);doc.text('RESERVATIONS · OFFERTE TOOL',lm,y+4.5);const today=new Date().toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});doc.setTextColor(...gr);doc.text([`Offerte Nr. ${nr}`,`Datum: ${today}`,'Gültig: 24 Std.'],210-lm,y,{align:'right'});y+=12;doc.setDrawColor(...ln);doc.setLineWidth(0.4);doc.line(lm,y,210-lm,y);y+=9;const salEl=letter.querySelector('.lsal');doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);doc.text(salEl?.innerText||'',lm,y);y+=8;const introEl=letter.querySelector('.lint');doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...gr);const il=doc.splitTextToSize(introEl?.innerText||'',tw);doc.text(il,lm,y);y+=il.length*4.8+8;const rd=rooms.map((_,i)=>getRD(i,n));const xs=getX(n);const xT=xs.reduce((s,e)=>s+e.amt,0);rd.forEach((r,i)=>{const st=sT(r.rc,r.season);const pay=r.rc.payDe;const isF=i===0;const rt=r.tot+(isF?xT:0);doc.setFillColor(250,250,250);doc.setDrawColor(...ln);doc.setLineWidth(0.3);doc.roundedRect(lm,y,tw,7,1.5,1.5,'FD');doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...dk);doc.text(r.fullCat,lm+4,y+4.8);doc.setFontSize(8);doc.setTextColor(...gold);doc.text(`[${r.rate}]`,lm+4+doc.getTextWidth(r.fullCat)+3,y+4.8);y+=9;doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...mu);doc.text(`${fD(ci)} – ${fD(co)}   ·   ${n} Nächte`,lm+4,y);y+=7;const cols=[lm,lm+55,210-lm-26];doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...mu);doc.text('POSITION',cols[0],y);doc.text('DETAILS',cols[1],y);doc.text('BETRAG',cols[2],y,{align:'right'});y+=2.5;doc.setDrawColor(...ln);doc.setLineWidth(0.25);doc.line(lm,y,210-lm,y);y+=4.5;const tr=[['Logis',`${n}N × ${fC(r.pn)}`,fC(r.lo)],['Endreinigung',SZ[r.size],fC(r.cl)]];if(isF)xs.forEach(e=>tr.push([e.label,e.detail,e.amt>0?fC(e.amt):'Kostenlos']));doc.setFont('helvetica','normal');tr.forEach(row=>{doc.setFontSize(9.5);doc.setTextColor(...dk);doc.text(row[0],cols[0],y,{maxWidth:50});doc.setFontSize(8.5);doc.setTextColor(...gr);doc.text(row[1],cols[1],y,{maxWidth:48});doc.setFontSize(9.5);doc.setTextColor(...dk);doc.text(row[2],cols[2],y,{align:'right'});y+=1.5;doc.setDrawColor(...ln);doc.setLineWidth(0.2);doc.line(lm,y+3,210-lm,y+3);y+=5.5});y+=1;doc.setDrawColor(...gr);doc.setLineWidth(0.5);doc.line(lm,y,210-lm,y);y+=5;doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);doc.text('Gesamtbetrag',lm,y);doc.text(fC(rt),cols[2],y,{align:'right'});y+=9;doc.setFillColor(250,245,232);doc.setDrawColor(232,213,160);doc.setLineWidth(0.3);doc.roundedRect(lm,y,tw,14,1,1,'FD');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...gold);doc.text('STORNIERUNGSBEDINGUNGEN',lm+4,y+5);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,80,20);const sl=doc.splitTextToSize(st+' '+pay,tw-8);doc.text(sl,lm+4,y+9.5);y+=sl.length*3.8+18});if(mode==='multi'&&rooms.length>1){const g=rd.reduce((s,r)=>s+r.tot,0)+xT;doc.setFillColor(250,245,232);doc.setDrawColor(...gold);doc.setLineWidth(0.5);doc.roundedRect(lm,y,tw,9,1.5,1.5,'FD');doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);doc.text('Gesamtbetrag alle Apartments',lm+4,y+6);doc.text(fC(g),210-lm-2,y+6,{align:'right'});y+=15}const vn=letter.querySelector('.vnote span');doc.setFillColor(235,242,251);doc.setDrawColor(195,217,240);doc.setLineWidth(0.3);doc.roundedRect(lm,y,tw,8,1.5,1.5,'FD');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(26,86,160);doc.text(vn?.innerText||'',lm+4,y+5.5,{maxWidth:tw-8});y+=13;const cta=letter.querySelector('.lcta');doc.setFillColor(250,245,232);doc.setDrawColor(232,213,160);doc.roundedRect(lm,y,tw,8,1.5,1.5,'FD');doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...gold);doc.text(cta?.innerText||'',lm+4,y+5.5,{maxWidth:tw-8});y+=13;letter.querySelectorAll('.lout').forEach(el=>{doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...gr);const ls=doc.splitTextToSize(el.innerText,tw);doc.text(ls,lm,y);y+=ls.length*4.5+4});y+=4;doc.setDrawColor(...ln);doc.setLineWidth(0.4);doc.line(lm,y,210-lm,y);y+=5;doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(...dk);doc.text('Andermatt Alpine Apartments',lm,y);doc.text('+41 41 888 78 00',210-lm,y,{align:'right'});y+=5;doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...gr);doc.text('Reservations Team',lm,y);doc.text('info@alpine.apartments',210-lm,y,{align:'right'});y+=4;doc.text('Gütschgasse 6, 6490 Andermatt',lm,y);doc.text('alpine.apartments',210-lm,y,{align:'right'});doc.save(`Offerte_AAA_${nr}_${guest.replace(/\s+/g,'_')}.pdf`);lbl.textContent='Gespeichert!';setTimeout(()=>lbl.textContent='PDF speichern',3000)}catch(e){lbl.textContent='Fehler';setTimeout(()=>lbl.textContent='PDF speichern',3000)}}
+function mkPDF(){
+const lbl=document.getElementById('plbl');lbl.textContent='Wird erstellt...';
+const letter=document.getElementById('letterOut');
+if(!letter.innerHTML){lbl.textContent='PDF speichern';return}
+const nr=String(oNr).padStart(3,'0');
+const guest=document.getElementById('gname').value.trim()||'Gast';
+const n=gN();
+try{
+const{jsPDF}=window.jspdf;
+const doc=new jsPDF({unit:'mm',format:'a4'});
+const lm=22,rm=22,tw=210-22-22;let y=22;
+const dk=[25,25,25],gr=[90,90,90],mu=[150,150,150],ln=[220,220,220],gold=[139,105,20],goldLight=[232,213,160],goldPale=[250,245,232],blueDark=[26,86,160],bluePale=[235,242,251],blueBorder=[195,217,240];
+doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...dk);
+doc.text('Andermatt Alpine Apartments',lm,y);
+doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...gold);
+doc.text('Reservations \u00b7 Offerte Tool',lm,y+5);
+const today=new Date().toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
+doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...gr);
+doc.text('Offerte Nr. '+nr,210-rm,y,{align:'right'});
+doc.text('Datum: '+today,210-rm,y+4.5,{align:'right'});
+doc.text('G\u00fcltig: 24 Std.',210-rm,y+9,{align:'right'});
+y+=16;doc.setDrawColor(...ln);doc.setLineWidth(0.4);doc.line(lm,y,210-rm,y);y+=10;
+const salEl=letter.querySelector('.lsal');
+doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
+doc.text(salEl?.innerText||'',lm,y);y+=9;
+const introEl=letter.querySelector('.lint');
+doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...gr);
+const il=doc.splitTextToSize(introEl?.innerText||'',tw);
+doc.text(il,lm,y);y+=il.length*5+10;
+const rd=rooms.map((_,i)=>getRD(i,n));
+const xs=getX(n);const xT=xs.reduce((s,e)=>s+e.amt,0);
+rd.forEach((r,i)=>{
+const stornoFull=sT(r.rc,r.season)+' '+r.rc.payDe;
+const isF=i===0;const rt=r.tot+(isF?xT:0);
+doc.setFillColor(250,250,250);doc.setDrawColor(...ln);doc.setLineWidth(0.3);
+doc.rect(lm,y,tw,6,'FD');
+doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
+doc.text(r.fullCat,lm+4,y+4.3);
+const titleW=doc.getTextWidth(r.fullCat);
+const badgeX=lm+4+titleW+3;const badgeW=doc.getTextWidth(r.rate)+6;
+doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.3);
+doc.roundedRect(badgeX,y+1,badgeW,4,1,1,'FD');
+doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...gold);
+doc.text(r.rate,badgeX+3,y+4.2);
+y+=8;
+doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...mu);
+doc.text(fD(ci)+' \u2013 '+fD(co)+'   \u00b7   '+n+' '+(n===1?'Nacht':'N\u00e4chte'),lm+4,y);y+=8;
+const c0=lm,c1=lm+58,c2=210-rm;
+doc.setFillColor(245,245,245);doc.rect(lm,y,tw,5,'F');
+doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...mu);
+doc.text('POSITION',c0+4,y+3.5);doc.text('DETAILS',c1,y+3.5);doc.text('BETRAG',c2,y+3.5,{align:'right'});
+y+=5;doc.setDrawColor(...ln);doc.setLineWidth(0.25);doc.line(lm,y,210-rm,y);y+=1;
+const trows=[[lang==='de'?'Logis':'Accommodation',n+'N \u00d7 '+fC(r.pn),fC(r.lo)],[lang==='de'?'Endreinigung':'End cleaning',SZ[r.size],fC(r.cl)]];
+if(isF)xs.forEach(e=>trows.push([e.label,e.detail,e.amt>0?fC(e.amt):(lang==='de'?'Kostenlos':'Complimentary')]));
+trows.forEach(row=>{
+y+=1;
+doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...dk);
+doc.text(row[0],c0+4,y+4,{maxWidth:52});
+doc.setFontSize(8.5);doc.setTextColor(...gr);doc.text(row[1],c1,y+4,{maxWidth:46});
+doc.setFontSize(9.5);doc.setTextColor(...dk);doc.text(row[2],c2,y+4,{align:'right'});
+y+=6;doc.setDrawColor(...ln);doc.setLineWidth(0.2);doc.line(lm,y,210-rm,y);
+});
+y+=2;doc.setDrawColor(...gr);doc.setLineWidth(0.6);doc.line(lm,y,210-rm,y);y+=5;
+doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
+doc.text(lang==='de'?'Gesamtbetrag':'Total',c0+4,y);doc.text(fC(rt),c2,y,{align:'right'});y+=10;
+const stornoLines=doc.splitTextToSize(stornoFull,tw-10);
+const stornoH=stornoLines.length*4+8;
+doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.3);
+doc.rect(lm,y,tw,stornoH,'FD');
+doc.setFillColor(...gold);doc.rect(lm,y,2,stornoH,'F');
+doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...gold);
+doc.text(lang==='de'?'Stornierungsbedingungen:':'Cancellation policy:',lm+6,y+5);
+doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,60,10);
+doc.text(stornoLines,lm+6,y+10);y+=stornoH+10;
+});
+if(mode==='multi'&&rooms.length>1){
+const g=rd.reduce((s,r)=>s+r.tot,0)+xT;
+doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.5);
+doc.rect(lm,y,tw,10,'FD');
+doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
+doc.text(lang==='de'?'Gesamtbetrag alle Apartments':'Grand total all apartments',lm+4,y+7);
+doc.text(fC(g),210-rm,y+7,{align:'right'});y+=16;
+}
+const vnEl=letter.querySelector('.vnote span');
+const vnTxt=vnEl?.innerText||'';
+const vnLines=doc.splitTextToSize(vnTxt,tw-10);
+const vnH=vnLines.length*4+8;
+doc.setFillColor(...bluePale);doc.setDrawColor(...blueBorder);doc.setLineWidth(0.3);
+doc.rect(lm,y,tw,vnH,'FD');
+doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...blueDark);
+doc.text(vnLines,lm+5,y+5.5);y+=vnH+6;
+const ctaEl=letter.querySelector('.lcta');
+const ctaTxt=(ctaEl?.innerText||'').replace(/^[^\w\u00C0-\u017E]/,'').trim();
+const ctaLines=doc.splitTextToSize(ctaTxt,tw-10);
+const ctaH=ctaLines.length*4.5+8;
+doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.3);
+doc.rect(lm,y,tw,ctaH,'FD');
+doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...gold);
+doc.text(ctaLines,lm+5,y+6);y+=ctaH+10;
+Array.from(letter.querySelectorAll('.lout')).forEach(el=>{
+const isSmall=el.style.fontSize&&el.style.fontSize.includes('12');
+doc.setFont('helvetica','normal');doc.setFontSize(isSmall?8:9.5);
+doc.setTextColor(isSmall?150:90,isSmall?150:90,isSmall?150:90);
+const ls=doc.splitTextToSize(el.innerText,tw);
+doc.text(ls,lm,y);y+=ls.length*(isSmall?4:4.8)+5;
+});
+y+=4;doc.setDrawColor(...ln);doc.setLineWidth(0.4);doc.line(lm,y,210-rm,y);y+=6;
+doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...dk);
+doc.text('Andermatt Alpine Apartments',lm,y);doc.text('+41 41 888 78 00',210-rm,y,{align:'right'});y+=5;
+doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...gr);
+doc.text('Reservations Team',lm,y);doc.text('info@alpine.apartments',210-rm,y,{align:'right'});y+=4;
+doc.text('G\u00fctschgasse 6, 6490 Andermatt',lm,y);doc.text('alpine.apartments',210-rm,y,{align:'right'});
+doc.save('Offerte_AAA_'+nr+'_'+guest.replace(/\s+/g,'_')+'.pdf');
+lbl.textContent='Gespeichert!';setTimeout(()=>lbl.textContent='PDF speichern',3000);
+}catch(e){console.error(e);lbl.textContent='Fehler';setTimeout(()=>lbl.textContent='PDF speichern',3000);}
+}
 buildSal();renderRT();renderRP();renderXC();
 </script>
 </body>
