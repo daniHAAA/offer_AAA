@@ -381,128 +381,164 @@ ${loutHtml}
   });
 }
 function mkPDF(){
-const lbl=document.getElementById('plbl');lbl.textContent='Wird erstellt...';
-const letter=document.getElementById('letterOut');
-if(!letter.innerHTML){lbl.textContent='PDF speichern';return}
-const nr=String(oNr).padStart(3,'0');
-const guest=document.getElementById('gname').value.trim()||'Gast';
-const n=gN();
-try{
-const{jsPDF}=window.jspdf;
-const doc=new jsPDF({unit:'mm',format:'a4'});
-const lm=22,rm=22,tw=210-22-22;let y=22;
-const dk=[25,25,25],gr=[90,90,90],mu=[150,150,150],ln=[220,220,220],gold=[139,105,20],goldLight=[232,213,160],goldPale=[250,245,232],blueDark=[26,86,160],bluePale=[235,242,251],blueBorder=[195,217,240];
-doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...dk);
-doc.text('Andermatt Alpine Apartments',lm,y);
-doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...gold);
-doc.text('Reservations \u00b7 Offerte Tool',lm,y+5);
-const today=new Date().toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
-doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...gr);
-doc.text('Offerte Nr. '+nr,210-rm,y,{align:'right'});
-doc.text('Datum: '+today,210-rm,y+4.5,{align:'right'});
-doc.text('G\u00fcltig: 24 Std.',210-rm,y+9,{align:'right'});
-y+=16;doc.setDrawColor(...ln);doc.setLineWidth(0.4);doc.line(lm,y,210-rm,y);y+=10;
-const salEl=letter.querySelector('.lsal');
-doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
-doc.text(salEl?.innerText||'',lm,y);y+=9;
-const introEl=letter.querySelector('.lint');
-doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...gr);
-const il=doc.splitTextToSize(introEl?.innerText||'',tw);
-doc.text(il,lm,y);y+=il.length*5+10;
-const rd=rooms.map((_,i)=>getRD(i,n));
-const xs=getX(n);const xT=xs.reduce((s,e)=>s+e.amt,0);
-rd.forEach((r,i)=>{
-const stornoFull=sT(r.rc,r.season)+' '+r.rc.payDe;
-const isF=i===0;const rt=r.tot+(isF?xT:0);
-doc.setFillColor(250,250,250);doc.setDrawColor(...ln);doc.setLineWidth(0.3);
-doc.rect(lm,y,tw,8,'FD');
-doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
-doc.text(r.fullCat,lm+4,y+5.5);
-const titleW=doc.getTextWidth(r.fullCat);
-const badgeX=lm+4+titleW+3;const badgeW=doc.getTextWidth(r.rate)+6;
-doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.3);
-doc.roundedRect(badgeX,y+2,badgeW,4,1,1,'FD');
-doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...gold);
-doc.text(r.rate,badgeX+3,y+5.3);
-y+=10;
-doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...mu);
-doc.text(fD(ci)+' \u2013 '+fD(co)+'   \u00b7   '+n+' '+(n===1?'Nacht':'N\u00e4chte'),lm+4,y);y+=10;
-const c0=lm,c1=lm+58,c2=210-rm;
-doc.setFillColor(245,245,245);doc.rect(lm,y,tw,5,'F');
-doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...mu);
-doc.text('POSITION',c0+4,y+3.5);doc.text('DETAILS',c1,y+3.5);doc.text('BETRAG',c2,y+3.5,{align:'right'});
-y+=5;doc.setDrawColor(...ln);doc.setLineWidth(0.25);doc.line(lm,y,210-rm,y);y+=1;
-const trows=[[lang==='de'?'Logis':'Accommodation',n+'N \u00d7 '+fC(r.pn),fC(r.lo)],[lang==='de'?'Endreinigung':'End cleaning',SZ[r.size],fC(r.cl)]];
-if(isF)xs.forEach(e=>trows.push([e.label,e.detail,e.amt>0?fC(e.amt):(lang==='de'?'Kostenlos':'Complimentary')]));
-trows.forEach(row=>{
-y+=1;
-doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...dk);
-doc.text(row[0],c0+4,y+4,{maxWidth:52});
-doc.setFontSize(8.5);doc.setTextColor(...gr);doc.text(row[1],c1,y+4,{maxWidth:46});
-doc.setFontSize(9.5);doc.setTextColor(...dk);doc.text(row[2],c2,y+4,{align:'right'});
-y+=6;doc.setDrawColor(...ln);doc.setLineWidth(0.2);doc.line(lm,y,210-rm,y);
-});
-y+=2;doc.setDrawColor(...gr);doc.setLineWidth(0.6);doc.line(lm,y,210-rm,y);y+=5;
-doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
-doc.text(lang==='de'?'Gesamtbetrag':'Total',c0+4,y);doc.text(fC(rt),c2,y,{align:'right'});y+=10;
-const stornoLines=doc.splitTextToSize(stornoFull,tw-10);
-const stornoH=stornoLines.length*4+8;
-doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.3);
-doc.rect(lm,y,tw,stornoH,'FD');
-doc.setFillColor(...gold);doc.rect(lm,y,2,stornoH,'F');
-doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...gold);
-doc.text(lang==='de'?'Stornierungsbedingungen:':'Cancellation policy:',lm+6,y+5);
-doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,60,10);
-doc.text(stornoLines,lm+6,y+10);y+=stornoH+10;
-});
-if(mode==='multi'&&rooms.length>1){
-const g=rd.reduce((s,r)=>s+r.tot,0)+xT;
-doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.5);
-doc.rect(lm,y,tw,10,'FD');
-doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...dk);
-doc.text(lang==='de'?'Gesamtbetrag alle Apartments':'Grand total all apartments',lm+4,y+7);
-doc.text(fC(g),210-rm,y+7,{align:'right'});y+=16;
+  const letter=document.getElementById('letterOut');
+  if(!letter.innerHTML){alert('Bitte zuerst eine Offerte generieren.');return}
+  const nr=String(oNr).padStart(3,'0');
+  const guest=document.getElementById('gname').value.trim()||'Gast';
+  const salEl=letter.querySelector('.lsal');
+  const intEl=letter.querySelector('.lint');
+  const vnEl=letter.querySelector('.vnote span');
+  const ctaEl=letter.querySelector('.lcta');
+  const louts=Array.from(letter.querySelectorAll('.lout'));
+  const ocs=Array.from(letter.querySelectorAll('.oc'));
+  const today=new Date().toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const roomCardsHtml=ocs.map(oc=>{
+    const isGrand=oc.querySelector('.trgrand')&&!oc.querySelector('.oct');
+    if(isGrand) return '';
+    const oct=oc.querySelector('.oct');
+    const ocs2=oc.querySelector('.ocs');
+    const badge=oct?oct.querySelector('.rbdg'):null;
+    const titleTxt=oct?(oct.innerText.replace(badge?badge.innerText:'','')).trim():'';
+    const badgeTxt=badge?badge.innerText:'';
+    const subTxt=ocs2?ocs2.innerText:'';
+    const rows=Array.from(oc.querySelectorAll('tbody tr'));
+    const storno=oc.querySelector('.storno');
+    const stornoTxt=storno?storno.innerText:'';
+    let rowsHtml='';
+    rows.forEach(row=>{
+      const tds=row.querySelectorAll('td');
+      if(!tds.length)return;
+      const isTot=row.classList.contains('trtot');
+      const isGr=row.classList.contains('trgrand');
+      if(isTot||isGr){
+        rowsHtml+=`<tr class="${isTot?'tr-tot':'tr-grand'}"><td colspan="2"><strong>${tds[0]?tds[0].innerText:''}</strong></td><td class="amt"><strong>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</strong></td></tr>`;
+      } else {
+        rowsHtml+=`<tr><td>${tds[0]?tds[0].innerText:''}</td><td class="det">${tds[1]?tds[1].innerText:''}</td><td class="amt">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</td></tr>`;
+      }
+    });
+    const grandOc=ocs.find(o=>o.querySelector('.trgrand')&&!o.querySelector('.oct'));
+    let grandHtml='';
+    if(grandOc){
+      const gr=Array.from(grandOc.querySelectorAll('tbody tr'));
+      let grRows='';
+      gr.forEach(row=>{
+        const tds=row.querySelectorAll('td');
+        const isGr=row.classList.contains('trgrand');
+        if(isGr) grRows+=`<tr class="tr-grand"><td colspan="2"><strong>${tds[0]?tds[0].innerText:''}</strong></td><td class="amt"><strong>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</strong></td></tr>`;
+        else grRows+=`<tr><td>${tds[0]?tds[0].innerText:''}</td><td></td><td class="amt">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</td></tr>`;
+      });
+      grandHtml=`<div class="grand-box"><table><tbody>${grRows}</tbody></table></div>`;
+    }
+    return `<div class="room-card">
+      <div class="room-header">
+        <span class="room-title">${titleTxt}</span>${badgeTxt?`<span class="rate-badge">${badgeTxt}</span>`:''}
+      </div>
+      <div class="room-sub">${subTxt}</div>
+      <table>
+        <thead><tr><th style="width:35%">Position</th><th style="width:38%">Details</th><th class="amt" style="width:27%">Betrag</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div class="storno-box"><strong>Stornierungsbedingungen:</strong> ${stornoTxt.replace(/^Storno:/,'').replace(/^Stornierungsbedingungen:/,'').trim()}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  const loutsHtml=louts.map(el=>{
+    const isSmall=el.style.fontSize&&el.style.fontSize.includes('12');
+    return `<p class="${isSmall?'small-text':'body-text'}">${el.innerText}</p>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Offerte_AAA_${nr}_${guest.replace(/\s+/g,'_')}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 14mm 18mm}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:0.4pt solid #ddd}
+  .header-left .logo{font-size:13pt;font-weight:700;color:#1a1a1a}
+  .header-left .sub{font-size:7.5pt;color:#8B6914;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:1.5mm}
+  .header-right{text-align:right;font-size:7.5pt;color:#666;line-height:1.7}
+  .salutation{font-size:11pt;font-weight:700;margin-bottom:4mm}
+  .intro{font-size:9pt;color:#444;line-height:1.7;margin-bottom:6mm}
+  .room-card{background:#f9f9f9;border:0.4pt solid #ddd;padding:4mm 5mm;margin-bottom:4mm}
+  .room-header{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm}
+  .room-title{font-size:11pt;font-weight:700;color:#1a1a1a}
+  .rate-badge{font-size:7pt;font-weight:700;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:0.8mm 2mm;border-radius:2mm}
+  .room-sub{font-size:8pt;color:#777;margin-bottom:3mm}
+  table{width:100%;border-collapse:collapse;font-size:9pt}
+  thead tr{background:#f0f0f0}
+  th{text-align:left;font-size:7.5pt;font-weight:700;color:#888;padding:2mm 2mm;border-bottom:0.4pt solid #ddd;text-transform:uppercase;letter-spacing:.04em}
+  td{padding:2.2mm 2mm;border-bottom:0.3pt solid #eee;vertical-align:middle}
+  td.det{color:#666;font-size:8.5pt}
+  td.amt{text-align:right}
+  tr.tr-tot td{font-weight:700;font-size:10.5pt;border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.5mm}
+  tr.tr-grand td{font-weight:700;font-size:11pt;border-top:1.5pt solid #333;border-bottom:none;padding-top:2.5mm}
+  .storno-box{margin-top:3mm;border-left:2pt solid #E8D5A0;background:#FAF5E8;padding:2mm 3mm;font-size:8pt;color:#555;line-height:1.6}
+  .grand-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:3mm 5mm;margin-bottom:4mm}
+  .valid-box{background:#EBF2FB;border:0.4pt solid #C3D9F0;padding:2.5mm 4mm;font-size:8.5pt;color:#1A56A0;margin-bottom:3mm}
+  .cta-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:2.5mm 4mm;font-size:9pt;font-weight:700;color:#8B6914;margin-bottom:5mm}
+  .body-text{font-size:9pt;color:#444;line-height:1.7;margin-bottom:2.5mm}
+  .small-text{font-size:8pt;color:#777;line-height:1.6;margin-bottom:2.5mm}
+  .footer{margin-top:6mm;padding-top:3mm;border-top:0.4pt solid #ddd;display:flex;justify-content:space-between;font-size:8pt;color:#666;line-height:1.7}
+  .footer-left .name{font-size:9.5pt;font-weight:700;color:#1a1a1a;margin-bottom:0.5mm}
+  .footer-right{text-align:right}
+  @media print{
+    body{padding:0;margin:0}
+    @page{margin:18mm 18mm 14mm 18mm;size:A4}
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">Andermatt Alpine Apartments</div>
+      <div class="sub">Reservations · Offerte Tool</div>
+    </div>
+    <div class="header-right">
+      Offerte Nr. ${nr}<br>
+      Datum: ${today}<br>
+      Gültig: 24 Std.
+    </div>
+  </div>
+
+  <div class="salutation">${salEl?salEl.innerText:''}</div>
+  <div class="intro">${intEl?intEl.innerText:''}</div>
+
+  ${roomCardsHtml}
+
+  <div class="valid-box">${vnEl?vnEl.innerText:''}</div>
+  <div class="cta-box">${ctaEl?ctaEl.innerText.replace(/^[^\w\u00C0-\u017E]/,'').trim():''}</div>
+
+  ${loutsHtml}
+
+  <div class="footer">
+    <div class="footer-left">
+      <div class="name">Andermatt Alpine Apartments</div>
+      <div>Reservations Team</div>
+      <div>Gütschgasse 6, 6490 Andermatt</div>
+    </div>
+    <div class="footer-right">
+      +41 41 888 78 00<br>
+      info@alpine.apartments<br>
+      alpine.apartments
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const printWin=window.open('','_blank','width=900,height=700');
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.onload=()=>{
+    printWin.focus();
+    printWin.print();
+  };
+  document.getElementById('plbl').textContent='PDF speichern';
 }
-const vnEl=letter.querySelector('.vnote span');
-const vnTxt=vnEl?.innerText||'';
-const vnLines=doc.splitTextToSize(vnTxt,tw-10);
-const vnH=vnLines.length*4+8;
-doc.setFillColor(...bluePale);doc.setDrawColor(...blueBorder);doc.setLineWidth(0.3);
-doc.rect(lm,y,tw,vnH,'FD');
-doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...blueDark);
-doc.text(vnLines,lm+5,y+5.5);y+=vnH+6;
-const ctaEl=letter.querySelector('.lcta');
-const ctaTxt=(ctaEl?.innerText||'').replace(/^[^\w\u00C0-\u017E]/,'').trim();
-const ctaLines=doc.splitTextToSize(ctaTxt,tw-10);
-const ctaH=ctaLines.length*4.5+8;
-doc.setFillColor(...goldPale);doc.setDrawColor(...goldLight);doc.setLineWidth(0.3);
-doc.rect(lm,y,tw,ctaH,'FD');
-doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...gold);
-doc.text(ctaLines,lm+5,y+6);y+=ctaH+10;
-const loutEls=Array.from(letter.querySelectorAll('.lout'));
-let lastTxt='';
-loutEls.forEach(el=>{
-const txt=el.innerText.trim();
-if(!txt)return;
-// skip if this text was already included in the previous element (duplicate link)
-if(lastTxt&&lastTxt.includes(txt.substring(0,30)))return;
-lastTxt=txt;
-const isSmall=el.style.fontSize&&el.style.fontSize.includes('12');
-doc.setFont('helvetica','normal');doc.setFontSize(isSmall?8:9.5);
-doc.setTextColor(isSmall?150:90,isSmall?150:90,isSmall?150:90);
-const ls=doc.splitTextToSize(txt,tw);
-doc.text(ls,lm,y);y+=ls.length*(isSmall?4:4.8)+6;
-});
-y+=4;doc.setDrawColor(...ln);doc.setLineWidth(0.4);doc.line(lm,y,210-rm,y);y+=6;
-doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...dk);
-doc.text('Andermatt Alpine Apartments',lm,y);doc.text('+41 41 888 78 00',210-rm,y,{align:'right'});y+=5;
-doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...gr);
-doc.text('Reservations Team',lm,y);doc.text('info@alpine.apartments',210-rm,y,{align:'right'});y+=4;
-doc.text('G\u00fctschgasse 6, 6490 Andermatt',lm,y);doc.text('alpine.apartments',210-rm,y,{align:'right'});
-doc.save('Offerte_AAA_'+nr+'_'+guest.replace(/\s+/g,'_')+'.pdf');
-lbl.textContent='Gespeichert!';setTimeout(()=>lbl.textContent='PDF speichern',3000);
-}catch(e){console.error(e);lbl.textContent='Fehler';setTimeout(()=>lbl.textContent='PDF speichern',3000);}
-}
+
+
 buildSal();renderRT();renderRP();renderXC();
 </script>
 </body>
