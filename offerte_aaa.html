@@ -329,6 +329,17 @@ function saveSettings(){Object.keys(CFG.cleaning).forEach(k=>{const el=document.
     pct:parseFloat(document.getElementById('dc-pct-'+i)?.value)||d.pct
   }));['wlan','parking','catLink'].forEach(k=>{const de=document.getElementById('si-'+k+'-de');if(de)CFG.stdinfo[k+'De']=de.value;const en=document.getElementById('si-'+k+'-en');if(en)CFG.stdinfo[k+'En']=en.value});localStorage.setItem('aaa_cfg8',JSON.stringify(CFG));buildDiscountDropdown();
   const ok=document.getElementById('savok');ok.style.display='flex';setTimeout(()=>ok.style.display='none',2500);renderRP();renderXC()}
+function getNRFHint(){
+  const hasBAR=rooms.some(r=>r.rate==='BAR');
+  const days=ci?Math.floor((ci-new Date())/(1000*60*60*24)):0;
+  if(!hasBAR||days<30)return'';
+  const nrfRate=CFG.rates.find(r=>r.id==='NRF');
+  const lbl=nrfRate?nrfRate.label:'NRF';
+  return lang==='de'
+    ?`Hinweis: Sie k\u00f6nnen auch unsere nicht erstattungsf\u00e4hige Rate (${lbl}) w\u00e4hlen und erhalten dabei einen Rabatt von 10% auf den Logispreis. Bei dieser Option ist keine Stornierung m\u00f6glich und der Betrag wird sofort f\u00e4llig.`
+    :`Note: You may also choose our non-refundable rate (${lbl}) and receive a 10% discount on the accommodation price. This option is non-cancellable and payment is due immediately.`;
+}
+
 function copyOut(){
   const letter=document.getElementById('letterOut');
   if(!letter.innerHTML)return;
@@ -339,20 +350,18 @@ function copyOut(){
   const ctaEl=letter.querySelector('.lcta');
   const louts=Array.from(letter.querySelectorAll('.lout'));
   const ocs=Array.from(letter.querySelectorAll('.oc'));
-
-  function esc(s){return(s||'').replace(/&(?![a-z#0-9]+;)/gi,'&amp;')}
+  const hint=getNRFHint();
 
   function buildRoomTable(oc){
-    const title=oc.querySelector('.oct');
-    const sub=oc.querySelector('.ocs');
-    const rows=Array.from(oc.querySelectorAll('tbody tr'));
+    const titleEl=oc.querySelector('.oct');
+    const subEl=oc.querySelector('.ocs');
+    const badge=titleEl?titleEl.querySelector('.rbdg'):null;
+    const titleTxt=titleEl?(titleEl.innerText.replace(badge?badge.innerText:'','')).trim():'';
+    const badgeTxt=badge?badge.innerText.trim():'';
+    const subTxt=subEl?subEl.innerText:'';
     const storno=oc.querySelector('.storno');
-    const titleTxt=title?title.innerText:'';
-    const rateBadge=title?title.querySelector('.rbdg'):'';
-    const rateTxt=rateBadge?rateBadge.innerText:'';
-    const titleClean=titleTxt.replace(rateTxt,'').trim();
-    const subTxt=sub?sub.innerText:'';
-    const stornTxt=storno?storno.innerText:'';
+    const stornoTxt=storno?storno.innerText.replace(/^Storno:/,'').trim():'';
+    const rows=Array.from(oc.querySelectorAll('tbody tr'));
 
     let rowsHtml='';
     rows.forEach(row=>{
@@ -361,76 +370,81 @@ function copyOut(){
       const isTot=row.classList.contains('trtot');
       const isGrand=row.classList.contains('trgrand');
       if(isTot||isGrand){
-        const borderTop=isGrand?'2pt solid #333333':'1.5pt solid #AAAAAA';
-        const fs=isGrand?'12pt':'11pt';
         rowsHtml+=`<tr>
-          <td colspan="2" style="border-top:${borderTop};padding:10pt 8pt 6pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[0]?tds[0].innerText:''}</b></font></td>
-          <td align="right" style="border-top:${borderTop};padding:10pt 8pt 6pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</b></font></td>
+          <td colspan="2" style="border-top:1.5pt solid #AAAAAA;padding:9pt 8pt 5pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[0]?tds[0].innerText:''}</b></font></td>
+          <td align="right" style="border-top:1.5pt solid #AAAAAA;padding:9pt 8pt 5pt;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</b></font></td>
         </tr>`;
       } else {
+        const isDisc=row.querySelector('td[style*="2D7D46"]');
+        const isStrike=row.querySelector('s');
+        const color=isDisc?'#2D7D46':isStrike?'#AAAAAA':'#1a1a1a';
+        const pos=tds[0]?tds[0].innerText:'';
+        const det=tds[1]?tds[1].innerText:'';
+        const amt=tds[tds.length-1]?tds[tds.length-1].innerText:'';
+        const posHtml=isStrike?`<s>${pos}</s>`:pos;
+        const amtHtml=isStrike?`<s>${amt}</s>`:amt;
         rowsHtml+=`<tr>
-          <td width="35%" style="border-bottom:1pt solid #EEEEEE;padding:8pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[0]?tds[0].innerText:''}</font></td>
-          <td width="40%" style="border-bottom:1pt solid #EEEEEE;padding:8pt"><font face="Arial Nova,Arial" size="1" color="#777777">${tds[1]?tds[1].innerText:''}</font></td>
-          <td width="25%" align="right" style="border-bottom:1pt solid #EEEEEE;padding:8pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</font></td>
+          <td style="border-bottom:1pt solid #EEEEEE;padding:7pt 8pt"><font face="Arial Nova,Arial" size="2" color="${color}">${posHtml}</font></td>
+          <td style="border-bottom:1pt solid #EEEEEE;padding:7pt 8pt"><font face="Arial Nova,Arial" size="1" color="#777777">${det}</font></td>
+          <td align="right" style="border-bottom:1pt solid #EEEEEE;padding:7pt 8pt;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="${color}">${amtHtml}</font></td>
         </tr>`;
       }
     });
 
     return `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F8F8F8" style="border:1pt solid #E0E0E0;margin-bottom:0">
-  <tr>
-    <td style="padding:14pt 16pt">
-      <font face="Arial Nova,Arial" color="#1a1a1a"><b><font size="3">${titleClean}</font>${rateTxt?` <font size="1" color="#8B6914" style="background-color:#FAF5E8;border:1pt solid #E8D5A0">&nbsp;${rateTxt}&nbsp;</font>`:''}
-      </b></font><br>
-      <font face="Arial Nova,Arial" size="1" color="#777777">${subTxt}</font><br><br>
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr bgcolor="#EFEFEF">
-          <td width="35%" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>POSITION</b></font></td>
-          <td width="40%" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>DETAILS</b></font></td>
-          <td width="25%" align="right" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>BETRAG</b></font></td>
-        </tr>
-        ${rowsHtml}
-      </table>
-      <br>
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td width="4" bgcolor="#E8D5A0" style="font-size:1pt;line-height:1pt">&nbsp;</td>
-          <td bgcolor="#FAF5E8" style="padding:7pt 12pt"><font face="Arial Nova,Arial" size="1" color="#666666">${stornTxt}</font></td>
-        </tr>
-      </table>
-    </td>
-  </tr>
+  <tr><td style="padding:14pt 16pt">
+    <font face="Arial Nova,Arial" color="#1a1a1a"><b><font size="3">${titleTxt}</font></b>${badgeTxt?` <font face="Arial Nova,Arial" size="1" color="#8B6914" style="background-color:#FAF5E8;border:1pt solid #E8D5A0">&nbsp;${badgeTxt}&nbsp;</font>`:''}
+    </font><br>
+    <font face="Arial Nova,Arial" size="1" color="#777777">${subTxt}</font><br><br>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr bgcolor="#EFEFEF">
+        <td width="38%" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>POSITION</b></font></td>
+        <td width="37%" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>DETAILS</b></font></td>
+        <td width="25%" align="right" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>BETRAG</b></font></td>
+      </tr>
+      ${rowsHtml}
+    </table>
+    <br>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td width="3" bgcolor="#E8D5A0" style="font-size:1pt;line-height:1pt">&nbsp;</td>
+        <td bgcolor="#FAF5E8" style="padding:7pt 12pt"><font face="Arial Nova,Arial" size="1" color="#666666">${stornoTxt}</font></td>
+      </tr>
+    </table>
+  </td></tr>
 </table>`;
   }
 
-  const roomTablesHtml=ocs.map(oc=>{
-    const isGrand=oc.style.borderColor==='var(--gb)'||oc.querySelector('.trgrand');
-    if(isGrand&&!oc.querySelector('.oct'))return'';
-    return buildRoomTable(oc);
-  }).filter(Boolean).join('<br>');
-
+  // Build room cards
+  const mainOcs=ocs.filter(oc=>oc.querySelector('.oct'));
   const grandOc=ocs.find(oc=>!oc.querySelector('.oct')&&oc.querySelector('.trgrand'));
+  let roomTablesHtml=mainOcs.map(oc=>buildRoomTable(oc)).join('<br>');
+
   let grandHtml='';
   if(grandOc){
     const rows=Array.from(grandOc.querySelectorAll('tbody tr'));
-    let grandRows='';
+    let gr='';
     rows.forEach(row=>{
       const tds=row.querySelectorAll('td');
       const isGrand=row.classList.contains('trgrand');
       if(isGrand){
-        grandRows+=`<tr><td colspan="2" style="border-top:2pt solid #333333;padding:10pt 8pt 6pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[0]?tds[0].innerText:''}</b></font></td><td align="right" style="border-top:2pt solid #333333;padding:10pt 8pt 6pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</b></font></td></tr>`;
+        gr+=`<tr><td colspan="2" style="border-top:2pt solid #333333;padding:10pt 8pt 5pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[0]?tds[0].innerText:''}</b></font></td><td align="right" style="border-top:2pt solid #333333;padding:10pt 8pt 5pt;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</b></font></td></tr>`;
       } else {
-        grandRows+=`<tr><td colspan="2" style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[0]?tds[0].innerText:''}</font></td><td align="right" style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</font></td></tr>`;
+        gr+=`<tr><td style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[0]?tds[0].innerText:''}</font></td><td style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE"></td><td align="right" style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</font></td></tr>`;
       }
     });
-    grandHtml=`<br><table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="border:1pt solid #E8D5A0"><tr><td style="padding:12pt 16pt"><table width="100%" cellpadding="0" cellspacing="0" border="0">${grandRows}</table></td></tr></table>`;
+    grandHtml=`<br><table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="border:1pt solid #E8D5A0"><tr><td style="padding:12pt 16pt"><table width="100%" cellpadding="0" cellspacing="0" border="0">${gr}</table></td></tr></table>`;
   }
 
-  const loutHtml=louts.map(el=>`<font face="Arial Nova,Arial" size="2" color="${el.style.color&&el.style.color.includes('mu')?'#777777':'#444444'}">${el.innerText}</font><br><br>`).join('');
+  const loutsHtml=louts.map(el=>{
+    const isSmall=el.style.fontSize&&el.style.fontSize.includes('12');
+    return `<font face="Arial Nova,Arial" size="${isSmall?1:2}" color="${isSmall?'#777777':'#444444'}">${el.innerText}</font><br><br>`;
+  }).join('');
 
   const html=`<html><head><meta charset="UTF-8"></head><body style="margin:0;padding:16pt;font-family:'Arial Nova',Arial,sans-serif;font-size:10pt;color:#1a1a1a">
 <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td>
 
-<font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b><font size="3">${salEl?salEl.innerText:''}</font></b></font><br><br>
+<font face="Arial Nova,Arial" size="2" color="#1a1a1a">${salEl?salEl.innerText:''}</font><br><br>
 
 <font face="Arial Nova,Arial" size="2" color="#444444">${intEl?intEl.innerText:''}</font><br><br><br>
 
@@ -446,12 +460,14 @@ ${grandHtml}
 <br>
 
 <table width="100%" cellpadding="12" cellspacing="0" border="0" bgcolor="#FAF5E8" style="border:1pt solid #E8D5A0">
-  <tr><td><font face="Arial Nova,Arial" size="2" color="#8B6914"><b>${ctaEl?ctaEl.innerText.replace(/^[^\w]/,'').trim():''}</b></font></td></tr>
+  <tr><td><font face="Arial Nova,Arial" size="2" color="#8B6914"><b>${ctaEl?ctaEl.innerText.replace(/^[^\w\u00C0-\u017E]/,'').trim():''}</b></font></td></tr>
 </table>
 
 <br><br>
 
-${loutHtml}
+${loutsHtml}
+
+${hint?`<font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${hint}</b></font><br><br>`:''}
 
 </td></tr></table>
 </body></html>`;
@@ -459,170 +475,144 @@ ${loutHtml}
   const blob=new Blob([html],{type:'text/html'});
   navigator.clipboard.write([new ClipboardItem({'text/html':blob})]).then(()=>{
     document.getElementById('clbl').textContent='Kopiert!';
-    setTimeout(()=>document.getElementById('clbl').textContent='Für Outlook kopieren',2500);
+    setTimeout(()=>document.getElementById('clbl').textContent='F\u00fcr Outlook kopieren',2500);
   }).catch(()=>{
     navigator.clipboard.writeText(letter.innerText).then(()=>{
       document.getElementById('clbl').textContent='Kopiert (Text)';
-      setTimeout(()=>document.getElementById('clbl').textContent='Für Outlook kopieren',2500);
+      setTimeout(()=>document.getElementById('clbl').textContent='F\u00fcr Outlook kopieren',2500);
     });
   });
 }
+
 function mkPDF(){
   const letter=document.getElementById('letterOut');
   if(!letter.innerHTML){alert('Bitte zuerst eine Offerte generieren.');return}
   const nr=String(oNr).padStart(3,'0');
   const guest=document.getElementById('gname').value.trim()||'Gast';
+  const today=new Date().toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const hint=getNRFHint();
+
   const salEl=letter.querySelector('.lsal');
   const intEl=letter.querySelector('.lint');
   const vnEl=letter.querySelector('.vnote span');
   const ctaEl=letter.querySelector('.lcta');
   const louts=Array.from(letter.querySelectorAll('.lout'));
   const ocs=Array.from(letter.querySelectorAll('.oc'));
-  const today=new Date().toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-  const roomCardsHtml=ocs.map(oc=>{
-    const isGrand=oc.querySelector('.trgrand')&&!oc.querySelector('.oct');
-    if(isGrand) return '';
-    const oct=oc.querySelector('.oct');
-    const ocs2=oc.querySelector('.ocs');
-    const badge=oct?oct.querySelector('.rbdg'):null;
-    const titleTxt=oct?(oct.innerText.replace(badge?badge.innerText:'','')).trim():'';
-    const badgeTxt=badge?badge.innerText:'';
-    const subTxt=ocs2?ocs2.innerText:'';
-    const rows=Array.from(oc.querySelectorAll('tbody tr'));
+  const mainOcs=ocs.filter(oc=>oc.querySelector('.oct'));
+  const grandOc=ocs.find(oc=>!oc.querySelector('.oct')&&oc.querySelector('.trgrand'));
+
+  function buildPDFCard(oc){
+    const titleEl=oc.querySelector('.oct');
+    const subEl=oc.querySelector('.ocs');
+    const badge=titleEl?titleEl.querySelector('.rbdg'):null;
+    const titleTxt=titleEl?(titleEl.innerText.replace(badge?badge.innerText:'','')).trim():'';
+    const badgeTxt=badge?badge.innerText.trim():'';
+    const subTxt=subEl?subEl.innerText:'';
     const storno=oc.querySelector('.storno');
-    const stornoTxt=storno?storno.innerText:'';
+    const stornoTxt=storno?storno.innerText.replace(/^Storno:/,'').trim():'';
+    const rows=Array.from(oc.querySelectorAll('tbody tr'));
     let rowsHtml='';
     rows.forEach(row=>{
       const tds=row.querySelectorAll('td');
       if(!tds.length)return;
       const isTot=row.classList.contains('trtot');
-      const isGr=row.classList.contains('trgrand');
-      if(isTot||isGr){
+      const isGrand=row.classList.contains('trgrand');
+      const isDisc=row.querySelector('td[style*="2D7D46"]');
+      const isStrike=row.querySelector('s');
+      if(isTot||isGrand){
         rowsHtml+=`<tr class="${isTot?'tr-tot':'tr-grand'}"><td colspan="2"><strong>${tds[0]?tds[0].innerText:''}</strong></td><td class="amt"><strong>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</strong></td></tr>`;
       } else {
-        rowsHtml+=`<tr><td>${tds[0]?tds[0].innerText:''}</td><td class="det">${tds[1]?tds[1].innerText:''}</td><td class="amt">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</td></tr>`;
+        const color=isDisc?'color:#2D7D46':isStrike?'color:#AAAAAA':'';
+        const posHtml=isStrike?`<s>${tds[0]?tds[0].innerText:''}</s>`:(tds[0]?tds[0].innerText:'');
+        const amtHtml=isStrike?`<s>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</s>`:(tds[tds.length-1]?tds[tds.length-1].innerText:'');
+        rowsHtml+=`<tr><td style="${color}">${posHtml}</td><td class="det">${tds[1]?tds[1].innerText:''}</td><td class="amt" style="${color}">${amtHtml}</td></tr>`;
       }
     });
-    const grandOc=ocs.find(o=>o.querySelector('.trgrand')&&!o.querySelector('.oct'));
-    let grandHtml='';
-    if(grandOc){
-      const gr=Array.from(grandOc.querySelectorAll('tbody tr'));
-      let grRows='';
-      gr.forEach(row=>{
-        const tds=row.querySelectorAll('td');
-        const isGr=row.classList.contains('trgrand');
-        if(isGr) grRows+=`<tr class="tr-grand"><td colspan="2"><strong>${tds[0]?tds[0].innerText:''}</strong></td><td class="amt"><strong>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</strong></td></tr>`;
-        else grRows+=`<tr><td>${tds[0]?tds[0].innerText:''}</td><td></td><td class="amt">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</td></tr>`;
-      });
-      grandHtml=`<div class="grand-box"><table><tbody>${grRows}</tbody></table></div>`;
-    }
     return `<div class="room-card">
-      <div class="room-header">
-        <span class="room-title">${titleTxt}</span>${badgeTxt?`<span class="rate-badge">${badgeTxt}</span>`:''}
-      </div>
+      <div class="room-header"><span class="room-title">${titleTxt}</span>${badgeTxt?`<span class="rate-badge">${badgeTxt}</span>`:''}</div>
       <div class="room-sub">${subTxt}</div>
-      <table>
-        <thead><tr><th style="width:35%">Position</th><th style="width:38%">Details</th><th class="amt" style="width:27%">Betrag</th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
-      <div class="storno-box"><strong>Stornierungsbedingungen:</strong> ${stornoTxt.replace(/^Storno:/,'').replace(/^Stornierungsbedingungen:/,'').trim()}</div>
+      <table><thead><tr><th style="width:38%">Position</th><th style="width:37%">Details</th><th class="amt" style="width:25%">Betrag</th></tr></thead>
+      <tbody>${rowsHtml}</tbody></table>
+      <div class="storno-box">${stornoTxt}</div>
     </div>`;
-  }).filter(Boolean).join('');
+  }
+
+  let grandHtml='';
+  if(grandOc){
+    const rows=Array.from(grandOc.querySelectorAll('tbody tr'));
+    let gr='';
+    rows.forEach(row=>{
+      const tds=row.querySelectorAll('td');
+      const isGrand=row.classList.contains('trgrand');
+      gr+=isGrand
+        ?`<tr class="tr-grand"><td colspan="2"><strong>${tds[0]?tds[0].innerText:''}</strong></td><td class="amt"><strong>${tds[tds.length-1]?tds[tds.length-1].innerText:''}</strong></td></tr>`
+        :`<tr><td>${tds[0]?tds[0].innerText:''}</td><td></td><td class="amt">${tds[tds.length-1]?tds[tds.length-1].innerText:''}</td></tr>`;
+    });
+    grandHtml=`<div class="grand-box"><table><tbody>${gr}</tbody></table></div>`;
+  }
 
   const loutsHtml=louts.map(el=>{
     const isSmall=el.style.fontSize&&el.style.fontSize.includes('12');
     return `<p class="${isSmall?'small-text':'body-text'}">${el.innerText}</p>`;
   }).join('');
 
-  const html=`<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
+  const html=`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
 <title>Offerte_AAA_${nr}_${guest.replace(/\s+/g,'_')}</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 14mm 18mm}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:0.4pt solid #ddd}
-  .header-left .logo{font-size:13pt;font-weight:700;color:#1a1a1a}
-  .header-left .sub{font-size:7.5pt;color:#8B6914;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:1.5mm}
-  .header-right{text-align:right;font-size:7.5pt;color:#666;line-height:1.7}
-  .salutation{font-size:11pt;font-weight:700;margin-bottom:4mm}
-  .intro{font-size:9pt;color:#444;line-height:1.7;margin-bottom:6mm}
-  .room-card{background:#f9f9f9;border:0.4pt solid #ddd;padding:4mm 5mm;margin-bottom:4mm}
-  .room-header{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm}
-  .room-title{font-size:11pt;font-weight:700;color:#1a1a1a}
-  .rate-badge{font-size:7pt;font-weight:700;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:0.8mm 2mm;border-radius:2mm}
-  .room-sub{font-size:8pt;color:#777;margin-bottom:3mm}
-  table{width:100%;border-collapse:collapse;font-size:9pt}
-  thead tr{background:#f0f0f0}
-  th{text-align:left;font-size:7.5pt;font-weight:700;color:#888;padding:2mm 2mm;border-bottom:0.4pt solid #ddd;text-transform:uppercase;letter-spacing:.04em}
-  td{padding:2.2mm 2mm;border-bottom:0.3pt solid #eee;vertical-align:middle}
-  td.det{color:#666;font-size:8.5pt}
-  td.amt{text-align:right}
-  tr.tr-tot td{font-weight:700;font-size:10.5pt;border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.5mm}
-  tr.tr-grand td{font-weight:700;font-size:11pt;border-top:1.5pt solid #333;border-bottom:none;padding-top:2.5mm}
-  .storno-box{margin-top:3mm;border-left:2pt solid #E8D5A0;background:#FAF5E8;padding:2mm 3mm;font-size:8pt;color:#555;line-height:1.6}
-  .grand-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:3mm 5mm;margin-bottom:4mm}
-  .valid-box{background:#EBF2FB;border:0.4pt solid #C3D9F0;padding:2.5mm 4mm;font-size:8.5pt;color:#1A56A0;margin-bottom:3mm}
-  .cta-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:2.5mm 4mm;font-size:9pt;font-weight:700;color:#8B6914;margin-bottom:5mm}
-  .body-text{font-size:9pt;color:#444;line-height:1.7;margin-bottom:2.5mm}
-  .small-text{font-size:8pt;color:#777;line-height:1.6;margin-bottom:2.5mm}
-  .footer{margin-top:6mm;padding-top:3mm;border-top:0.4pt solid #ddd;display:flex;justify-content:space-between;font-size:8pt;color:#666;line-height:1.7}
-  .footer-left .name{font-size:9.5pt;font-weight:700;color:#1a1a1a;margin-bottom:0.5mm}
-  .footer-right{text-align:right}
-  @media print{
-    body{padding:0;margin:0}
-    @page{margin:18mm 18mm 14mm 18mm;size:A4}
-  }
-</style>
-</head>
-<body>
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">Andermatt Alpine Apartments</div>
-      <div class="sub">Reservations · Offerte Tool</div>
-    </div>
-    <div class="header-right">
-      Offerte Nr. ${nr}<br>
-      Datum: ${today}<br>
-      Gültig: 24 Std.
-    </div>
-  </div>
-
-  <div class="salutation">${salEl?salEl.innerText:''}</div>
-  <div class="intro">${intEl?intEl.innerText:''}</div>
-
-  ${roomCardsHtml}
-
-  <div class="valid-box">${vnEl?vnEl.innerText:''}</div>
-  <div class="cta-box">${ctaEl?ctaEl.innerText.replace(/^[^\w\u00C0-\u017E]/,'').trim():''}</div>
-
-  ${loutsHtml}
-  ${nrfHint?`<p class="body-text" style="font-weight:700;color:#1a1a1a">${nrfHint.replace(/<b>/g,'').replace(/<\/b>/g,'')}</p>`:''}
-
-  <div class="footer">
-    <div class="footer-left">
-      <div class="name">Andermatt Alpine Apartments</div>
-      <div>Reservations Team</div>
-      <div>Gütschgasse 6, 6490 Andermatt</div>
-    </div>
-    <div class="footer-right">
-      +41 41 888 78 00<br>
-      info@alpine.apartments<br>
-      alpine.apartments
-    </div>
-  </div>
-</body>
-</html>`;
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 14mm 18mm}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:0.4pt solid #ddd}
+.logo{font-size:13pt;font-weight:700}.sub{font-size:7.5pt;color:#8B6914;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:1.5mm}
+.meta{text-align:right;font-size:7.5pt;color:#666;line-height:1.7}
+.salutation{font-size:11pt;margin-bottom:4mm}
+.intro{font-size:9pt;color:#444;line-height:1.7;margin-bottom:6mm}
+.room-card{background:#f9f9f9;border:0.4pt solid #ddd;padding:4mm 5mm;margin-bottom:4mm}
+.room-header{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm}
+.room-title{font-size:11pt;font-weight:700}
+.rate-badge{font-size:7pt;font-weight:700;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:0.8mm 2mm;border-radius:2mm}
+.room-sub{font-size:8pt;color:#777;margin-bottom:3mm}
+table{width:100%;border-collapse:collapse;font-size:9pt}
+thead tr{background:#f0f0f0}
+th{text-align:left;font-size:7.5pt;font-weight:700;color:#888;padding:2mm;border-bottom:0.4pt solid #ddd;text-transform:uppercase;letter-spacing:.04em}
+td{padding:2.2mm 2mm;border-bottom:0.3pt solid #eee;vertical-align:middle}
+td.det{color:#666;font-size:8.5pt}td.amt{text-align:right}
+tr.tr-tot td{font-weight:700;font-size:10.5pt;border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.5mm}
+tr.tr-grand td{font-weight:700;font-size:11pt;border-top:1.5pt solid #333;border-bottom:none;padding-top:2.5mm}
+.storno-box{margin-top:3mm;border-left:2pt solid #E8D5A0;background:#FAF5E8;padding:2mm 3mm;font-size:8pt;color:#555;line-height:1.6}
+.grand-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:3mm 5mm;margin-bottom:4mm}
+.valid-box{background:#EBF2FB;border:0.4pt solid #C3D9F0;padding:2.5mm 4mm;font-size:8.5pt;color:#1A56A0;margin-bottom:3mm}
+.cta-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:2.5mm 4mm;font-size:9pt;font-weight:700;color:#8B6914;margin-bottom:5mm}
+.body-text{font-size:9pt;color:#444;line-height:1.7;margin-bottom:2.5mm}
+.small-text{font-size:8pt;color:#777;line-height:1.6;margin-bottom:2.5mm}
+.nrf-hint{font-size:9pt;font-weight:700;color:#1a1a1a;margin-bottom:2.5mm}
+.footer{margin-top:6mm;padding-top:3mm;border-top:0.4pt solid #ddd;display:flex;justify-content:space-between;font-size:8pt;color:#666;line-height:1.7}
+.footer-name{font-size:9.5pt;font-weight:700;color:#1a1a1a;margin-bottom:0.5mm}
+@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 14mm 18mm;size:A4}}
+</style></head><body>
+<div class="header">
+  <div><div class="logo">Andermatt Alpine Apartments</div><div class="sub">Reservations · Offerte Tool</div></div>
+  <div class="meta">Offerte Nr. ${nr}<br>Datum: ${today}<br>G\u00fcltig: 24 Std.</div>
+</div>
+<div class="salutation">${salEl?salEl.innerText:''}</div>
+<div class="intro">${intEl?intEl.innerText:''}</div>
+${mainOcs.map(oc=>buildPDFCard(oc)).join('')}
+${grandHtml}
+<div class="valid-box">${vnEl?vnEl.innerText:''}</div>
+<div class="cta-box">${ctaEl?ctaEl.innerText.replace(/^[^\w\u00C0-\u017E]/,'').trim():''}</div>
+${loutsHtml}
+${hint?`<p class="nrf-hint">${hint}</p>`:''}
+<div class="footer">
+  <div><div class="footer-name">Andermatt Alpine Apartments</div><div>Reservations Team</div><div>G\u00fctschgasse 6, 6490 Andermatt</div></div>
+  <div style="text-align:right">+41 41 888 78 00<br>info@alpine.apartments<br>alpine.apartments</div>
+</div>
+</body></html>`;
 
   const printWin=window.open('','_blank','width=900,height=700');
+  if(!printWin){alert('Bitte Pop-up-Blocker deaktivieren.');return}
   printWin.document.write(html);
   printWin.document.close();
-  printWin.onload=()=>{
-    printWin.focus();
-    printWin.print();
-  };
+  printWin.onload=function(){printWin.focus();printWin.print();};
   document.getElementById('plbl').textContent='PDF speichern';
 }
 
