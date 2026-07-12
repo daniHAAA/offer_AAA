@@ -252,18 +252,18 @@ function getDiscount(){
   return (CFG.discountCodes||[]).find(d=>d.code===val)||null;
 }
 function getSeason(date){
-  if(!date||!CFG.seasons)return'summer';
+  if(!date)return'summer';
+  const cfg=CFG.seasons||{summerStart:'05-01',winterStart:'11-01'};
   const d=new Date(date);
   const mmdd=String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  const sw=CFG.seasons.winterStart||'11-01';
-  const ss=CFG.seasons.summerStart||'05-01';
-  // Simple: if mmdd >= winterStart OR mmdd < summerStart => winter
-  if(sw>ss){return mmdd>=sw||mmdd<ss?'winter':'summer'}
-  else{return mmdd>=sw&&mmdd<ss?'winter':'summer'}
+  const sw=cfg.winterStart||'11-01';
+  const ss=cfg.summerStart||'05-01';
+  if(sw>ss){return(mmdd>=sw||mmdd<ss)?'winter':'summer';}
+  return(mmdd>=sw&&mmdd<ss)?'winter':'summer';
 }
 function setMode(m){mode=m;document.getElementById('mb-cmp').classList.toggle('active',m==='compare');document.getElementById('mb-mul').classList.toggle('active',m==='multi');renderRT();renderRP()}
 function renderRT(){const c=document.getElementById('rtabs');let h=rooms.map((r,i)=>`<button class="rtab ${i===ar?'active':''}" onclick="swR(${i})">${SZ[r.size]}</button>`).join('');if(rooms.length<5)h+=`<button class="rtab radd" onclick="addR()">+ ${lang==='de'?'Zimmer':'Room'}</button>`;c.innerHTML=h}
-function renderRP(){const c=document.getElementById('rpanels');c.innerHTML=rooms.map((r,i)=>`<div class="rpanel ${i===ar?'active':''}">${rooms.length>1?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="delR(${i})"><i class="ti ti-trash"></i>${lang==='de'?'Entfernen':'Remove'}</button></div>`:''}<div class="g2"><div class="fld"><label>${lang==='de'?'Grösse':'Size'}</label><select onchange="rooms[${i}].size=this.value;renderRT();renderRP()">${Object.entries(SZ).map(([v,l])=>`<option value="${v}" ${r.size===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="fld"><label>${lang==='de'?'Kategorie':'Category'}</label><select onchange="rooms[${i}].cat=this.value">${CATS.map(ct=>`<option ${r.cat===ct?'selected':''}>${ct}</option>`).join('')}</select></div></div><div class="togw"><button class="tbtn ${r.priceMode==='total'?'active':''}" onclick="setPM(${i},'total')">${lang==='de'?'Gesamtpreis':'Total price'}</button><button class="tbtn ${r.priceMode==='perNight'?'active':''}" onclick="setPM(${i},'perNight')">${lang==='de'?'Preis/Nacht':'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode==='total'?'Gesamtpreis CHF':'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="rooms[${i}].rate=this.value">${CFG.rates.map(rt=>`<option value="${rt.id}" ${r.rate===rt.id?'selected':''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang==='de'?'Saison':'Season'}</label><select onchange="rooms[${i}].season=this.value"><option value="summer" ${r.season==='summer'?'selected':''}>${lang==='de'?'Sommersaison':'Summer season'}</option><option value="winter" ${r.season==='winter'?'selected':''}>${lang==='de'?'Wintersaison':'Winter season'}</option></select></div></div></div>`).join('')}
+function renderRP(){const c=document.getElementById('rpanels');c.innerHTML=rooms.map((r,i)=>`<div class="rpanel ${i===ar?'active':''}">${rooms.length>1?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="delR(${i})"><i class="ti ti-trash"></i>${lang==='de'?'Entfernen':'Remove'}</button></div>`:''}<div class="g2"><div class="fld"><label>${lang==='de'?'Grösse':'Size'}</label><select onchange="rooms[${i}].size=this.value;renderRT();renderRP()">${Object.entries(SZ).map(([v,l])=>`<option value="${v}" ${r.size===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="fld"><label>${lang==='de'?'Kategorie':'Category'}</label><select onchange="rooms[${i}].cat=this.value">${CATS.map(ct=>`<option ${r.cat===ct?'selected':''}>${ct}</option>`).join('')}</select></div></div><div class="togw"><button class="tbtn ${r.priceMode==='total'?'active':''}" onclick="setPM(${i},'total')">${lang==='de'?'Gesamtpreis':'Total price'}</button><button class="tbtn ${r.priceMode==='perNight'?'active':''}" onclick="setPM(${i},'perNight')">${lang==='de'?'Preis/Nacht':'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode==='total'?'Gesamtpreis CHF':'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="rooms[${i}].rate=this.value">${CFG.rates.map(rt=>`<option value="${rt.id}" ${r.rate===rt.id?'selected':''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang==='de'?'Benutzerdefinierte Storno':'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRP()"><option value="auto" ${!r.customStorno?'selected':''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno?'selected':''}>Benutzerdefiniert</option></select></div></div>${r.customStorno?`<div class="fld" style="margin-top:8px"><label>${lang==='de'?'Stornotext':'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText||''}</textarea></div>`:''}</div>`).join('')}
 function setPM(i,m){rooms[i].priceMode=m;rooms[i].priceVal='';renderRP()}
 function swR(i){ar=i;renderRT();renderRP()}
 function addR(){if(rooms.length<5){rooms.push(mkR());ar=rooms.length-1;renderRT();renderRP()}}
@@ -315,11 +315,12 @@ function calPrev(e){e.stopPropagation();if(cm===0){cm=11;cy--}else cm--;renderCa
 function calNext(e){e.stopPropagation();if(cm===11){cm=0;cy++}else cm++;renderCal()}
 function pickDay(e,y,m,d){e.stopPropagation();const dt=new Date(y,m,d);if(!ci||step===1){ci=dt;co=null;step=2}else{if(dt<=ci){ci=dt;co=null;step=2}else{co=dt;step=1;updateCalLbl()}}renderCal()}
 function updateSeasonHints(){
+  if(!ci)return;
   const s=getSeason(ci);
-  const lbl=lang==='de'?(s==='summer'?'Sommersaison':'Wintersaison'):(s==='summer'?'Summer':'Winter');
+  const lbl=lang==='de'?(s==='summer'?'(→ Sommer)':'(→ Winter)'):(s==='summer'?'(→ Summer)':'(→ Winter)');
   rooms.forEach((_,i)=>{
     const el=document.getElementById('season-hint-'+i);
-    if(el)el.textContent='→ '+lbl;
+    if(el)el.textContent=lbl;
   });
 }
 function updateCalLbl(){const n=gN();const lbl=document.getElementById('cal-lbl');const chip=document.getElementById('nchip');const tr=document.getElementById('cal-trigger');if(ci&&co){lbl.textContent=`${fD(ci)}  →  ${fD(co)}`;lbl.style.color='var(--dk)';chip.innerHTML=`<span class="nchip">${n} ${lang==='de'?'Nächte':'nights'}</span>`;tr.classList.add('has');document.getElementById('cal-pop').style.display='none';updateSeasonHints();}else if(ci){lbl.textContent=fD(ci)+' → ?';lbl.style.color='var(--dk)';chip.innerHTML='';tr.classList.remove('has')}else{lbl.textContent=lang==='de'?'Anreise und Abreise wählen':'Select arrival and departure';lbl.style.color='var(--mu)';chip.innerHTML='';tr.classList.remove('has')}}
