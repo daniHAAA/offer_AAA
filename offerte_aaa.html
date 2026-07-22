@@ -1297,20 +1297,20 @@ function genGroupOffer() {
   const dateLine = `Andermatt, ${formatFullDate(new Date())}`;
 
   const blocksHtml = groupOffer.blocks.map((block, bi) => {
-    const linesHtml = block.lines.map(line => {
-      const b = computeGroupLinePricing(line, nights);
-      return `<table class="offer-table">
+    const lineResults = block.lines.map(line => computeGroupLinePricing(line, nights));
+    const linesHtml = lineResults.map(b => `<table class="offer-table">
       <tr><td>${t('Kategorie', 'Category')}</td><td>${b.fullCat}</td></tr>
       <tr><td>${t('Einheiten', 'Units')}</td><td>${b.units}</td></tr>
       <tr><td>${t('Preis pro Nacht', 'Price per Night')}</td><td>${formatCurrency(b.perNight)}</td></tr>
       <tr><td>${t('Einmalige Endreinigung', 'One-off cleaning fee')}</td><td>${formatCurrency(b.cleaning)}</td></tr>
       <tr><td>${t('Preis pro Apartment', 'Price per apartment')}</td><td>${formatCurrency(b.perApartment)}</td></tr>
-      <tr class="offer-row-total"><td>${t('Gesamtpreis', 'Total price')}</td><td><strong>${formatCurrency(b.total)}</strong></td></tr>
-    </table>`;
-    }).join('<div style="height:3mm"></div>');
+      <tr class="offer-row-total"><td>${t('Gesamtpreis Kategorie', 'Total price category')}</td><td><strong>${formatCurrency(b.total)}</strong></td></tr>
+    </table>`).join('<div style="height:3mm"></div>');
+    const blockTotal = lineResults.reduce((sum, b) => sum + b.total, 0);
     return `<div class="offer-block">
     <div class="offer-block-title">${t('Angebot', 'Offer')} ${bi + 1}</div>
     ${linesHtml}
+    <table class="offer-table offer-block-total"><tr class="offer-row-total"><td>${t('Gesamtpreis Angebot', 'Total price offer')} ${bi + 1}</td><td><strong>${formatCurrency(blockTotal)}</strong></td></tr></table>
   </div>`;
   }).join('');
 
@@ -1336,6 +1336,9 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;col
 .offer-table td{padding:1.8mm 2mm;border:0.4pt solid #eee}
 .offer-table td:first-child{font-weight:700;color:#444;width:45%}
 .offer-row-total td{border-top:0.8pt solid #aaa;font-size:10pt}
+.offer-block-total{margin-top:3mm;border:0.4pt solid #E8D5A0}
+.offer-block-total td{padding:2.5mm 2mm;background:#FAF5E8;border:none;font-size:10.5pt}
+.offer-block-total td:first-child{color:#8B6914}
 .footer-note{font-size:8pt;color:#777;margin:4mm 0;font-style:italic}
 .page2{page-break-before:always;padding-top:4mm}
 .page2-title{font-size:13pt;font-weight:700;margin-bottom:4mm}
