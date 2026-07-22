@@ -1120,7 +1120,11 @@ function removePaymentTier(i) {
   renderGroupTermsSettings();
 }
 
-function saveGroupTerms() {
+// Reads the Cut-off/Storno/Zahlungsbedingungen fields from the DOM into CONFIG.groupTerms
+// and persists them, without any UI feedback. Used both by the manual save button and
+// automatically before generating a PDF, so generating always uses whatever is currently
+// typed in those fields without requiring a separate save step first.
+function persistGroupTerms() {
   const cutoffEl = document.getElementById('gterm-cutoffdays');
   if (cutoffEl) CONFIG.groupTerms.cutOffDays = parseInt(cutoffEl.value) || 0;
 
@@ -1145,7 +1149,10 @@ function saveGroupTerms() {
   }));
 
   localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
+}
 
+function saveGroupTerms() {
+  persistGroupTerms();
   const ok = document.getElementById('gtermsavok');
   ok.style.display = 'flex';
   setTimeout(() => { ok.style.display = 'none'; }, 2500);
@@ -1462,6 +1469,8 @@ function genGroupOffer() {
       }
     }
   }
+
+  persistGroupTerms();
 
   const salLbl = salEl.options[salEl.selectedIndex].text;
   const isNeutralSalutation = salEl.value.endsWith('n') || salEl.value.endsWith('2');
