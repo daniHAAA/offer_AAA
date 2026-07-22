@@ -1182,7 +1182,7 @@ function saveSettings() {
 // apartment categories together (matching the reference document, where a single
 // "Offer 1" lists e.g. both Studio Superior and Studio Deluxe as separate lines).
 function createGroupCategoryLine() {
-  return { size: 'studio', cat: 'Standard', units: 1, offerText: '', priceVal: '' };
+  return { size: 'studio', cat: 'Standard', units: 1, priceVal: '' };
 }
 
 function createGroupOfferBlock() {
@@ -1204,9 +1204,8 @@ function renderGroupBlocks() {
     ${block.lines.map((line, li) => `<div style="border-top:1px solid var(--br);padding-top:.75rem;margin-top:.75rem">
       ${block.lines.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="bsm bdng" onclick="removeGroupLine(${bi},${li})"><i class="ti ti-trash"></i>${t('Kategorie entfernen', 'Remove category')}</button></div>` : ''}
       <div class="fld" style="margin-bottom:12px"><label>${t('Kategorie', 'Category')}</label><select onchange="setGroupLineCode(${bi},${li},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(line.size, line.cat))}</select></div>
-      <div class="g3">
+      <div class="g2">
         <div class="fld"><label>${t('Einheiten', 'Units')}</label><input type="number" min="1" value="${line.units}" oninput="groupOffer.blocks[${bi}].lines[${li}].units=this.value"></div>
-        <div class="fld"><label>${t('Angebot', 'Offer')}</label><input type="text" value="${line.offerText}" placeholder="${t('z.B. Sonderpreis', 'e.g. Special rate')}" oninput="groupOffer.blocks[${bi}].lines[${li}].offerText=this.value"></div>
         <div class="fld"><label>${t('Preis/Nacht (CHF)', 'Price/night (CHF)')}</label><input type="number" min="0" value="${line.priceVal}" oninput="groupOffer.blocks[${bi}].lines[${li}].priceVal=this.value"></div>
       </div>
     </div>`).join('')}
@@ -1250,7 +1249,7 @@ function computeGroupLinePricing(line, nights) {
   const perNight = parseFloat(line.priceVal) || 0;
   const perApartment = perNight * nights + cleaning;
   const total = perApartment * units;
-  return { fullCat: SIZE_LABELS[line.size] + ' ' + line.cat, units, offerText: line.offerText, cleaning, perNight, perApartment, total };
+  return { fullCat: SIZE_LABELS[line.size] + ' ' + line.cat, units, cleaning, perNight, perApartment, total };
 }
 
 // Renders a multi-line settings/reference text (paragraphs separated by \n, blank
@@ -1303,7 +1302,6 @@ function genGroupOffer() {
       return `<table class="offer-table">
       <tr><td>${t('Kategorie', 'Category')}</td><td>${b.fullCat}</td></tr>
       <tr><td>${t('Einheiten', 'Units')}</td><td>${b.units}</td></tr>
-      <tr><td>${t('Angebot', 'Offer')}</td><td>${b.offerText || '–'}</td></tr>
       <tr><td>${t('Preis pro Nacht', 'Price per Night')}</td><td>${formatCurrency(b.perNight)}</td></tr>
       <tr><td>${t('Einmalige Endreinigung', 'One-off cleaning fee')}</td><td>${formatCurrency(b.cleaning)}</td></tr>
       <tr><td>${t('Preis pro Apartment', 'Price per apartment')}</td><td>${formatCurrency(b.perApartment)}</td></tr>
