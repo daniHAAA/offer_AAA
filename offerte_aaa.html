@@ -209,6 +209,21 @@ table.pt .muc{color:var(--mu);font-size:12px}
     <div id="grp-blocks"></div>
     <button class="bsm badd" onclick="addGroupBlock()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Angebot hinzufügen</button>
   </div>
+  <div class="sec">
+    <div class="stit"><i class="ti ti-calendar-time"></i>Cut-off, Storno & Zahlungsbedingungen</div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Werte steuern die Zahlen in der Gruppenofferte-PDF (Storno- und Cut-off-Bedingungen) und gelten für alle künftigen Gruppenofferten.</p>
+    <div class="fld" style="margin-bottom:1rem;max-width:200px"><label>Cut-off-Tage vor dem Anlass</label><input type="number" id="gterm-cutoffdays" min="0"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Reduktionsstufen nach Cut-off</div>
+    <div id="s-reductiontiers"></div>
+    <button class="bsm badd" onclick="addReductionTier()" style="margin-top:.5rem;margin-bottom:1rem"><i class="ti ti-plus"></i>Stufe hinzufügen</button>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Stornostufen</div>
+    <div id="s-cancellationtiers"></div>
+    <button class="bsm badd" onclick="addCancellationTier()" style="margin-top:.5rem;margin-bottom:1rem"><i class="ti ti-plus"></i>Stufe hinzufügen</button>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Zahlungsplan</div>
+    <div id="s-paymentplan"></div>
+    <button class="bsm badd" onclick="addPaymentTier()" style="margin-top:.5rem"><i class="ti ti-plus"></i>Rate hinzufügen</button>
+    <div class="savebar" style="margin-top:1rem"><button class="bsm" style="background:var(--dk);color:var(--wh);border-color:var(--dk);padding:9px 20px;font-size:13px" onclick="saveGroupTerms()"><i class="ti ti-device-floppy"></i>Speichern</button><span class="savok" id="gtermsavok"><i class="ti ti-check"></i>Gespeichert</span></div>
+  </div>
   <button class="btnp" onclick="genGroupOffer()"><i class="ti ti-file-type-pdf"></i>Gruppenofferte PDF generieren</button>
   <div id="grpErrMsg" class="err" style="display:none"></div>
 </div>
@@ -232,20 +247,6 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div class="sec"><div class="stit"><i class="ti ti-writing"></i>Brieftexte DE / EN</div><div id="s-texts"></div></div>
   <div class="sec"><div class="stit"><i class="ti ti-message-circle"></i>Grussformeln</div><div id="s-greet"></div><button class="bsm badd" onclick="addGreet()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Grussformel hinzufügen</button></div>
   <div class="sec"><div class="stit"><i class="ti ti-info-circle"></i>Standardhinweise</div><div id="s-stdinfo"></div></div>
-  <div class="sec">
-    <div class="stit"><i class="ti ti-calendar-time"></i>Gruppenofferte: Cut-off, Storno & Zahlungsbedingungen</div>
-    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Werte steuern die Zahlen in der Gruppenofferte-PDF (Storno- und Cut-off-Bedingungen).</p>
-    <div class="fld" style="margin-bottom:1rem;max-width:200px"><label>Cut-off-Tage vor dem Anlass</label><input type="number" id="gterm-cutoffdays" min="0"></div>
-    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Reduktionsstufen nach Cut-off</div>
-    <div id="s-reductiontiers"></div>
-    <button class="bsm badd" onclick="addReductionTier()" style="margin-top:.5rem;margin-bottom:1rem"><i class="ti ti-plus"></i>Stufe hinzufügen</button>
-    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Stornostufen</div>
-    <div id="s-cancellationtiers"></div>
-    <button class="bsm badd" onclick="addCancellationTier()" style="margin-top:.5rem;margin-bottom:1rem"><i class="ti ti-plus"></i>Stufe hinzufügen</button>
-    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Zahlungsplan</div>
-    <div id="s-paymentplan"></div>
-    <button class="bsm badd" onclick="addPaymentTier()" style="margin-top:.5rem"><i class="ti ti-plus"></i>Rate hinzufügen</button>
-  </div>
   <div class="sec">
     <div class="stit"><i class="ti ti-users"></i>Gruppenofferte Texte (DE / EN)</div>
     <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Texte werden in der Gruppenofferte (PDF) verwendet, je nach gewählter Sprache (DE/EN oben rechts).</p>
@@ -466,6 +467,7 @@ function goTab(name) {
     document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
   });
   if (name === 'history') renderHistoryList();
+  if (name === 'group') renderGroupTermsSettings();
   if (name === 'settings') { document.getElementById('s-texts').innerHTML = ''; renderSettingsPanel(); }
 }
 
@@ -990,7 +992,6 @@ function clrHist() {
 function renderSettingsPanel() {
   renderDiscountSettingsPanel();
   renderGroupTextsSettings();
-  renderGroupTermsSettings();
 
   const summerInput = document.getElementById('season-summer');
   const winterInput = document.getElementById('season-winter');
@@ -1117,6 +1118,44 @@ function removePaymentTier(i) {
   if (CONFIG.groupTerms.paymentPlan.length <= 1) return;
   CONFIG.groupTerms.paymentPlan.splice(i, 1);
   renderGroupTermsSettings();
+}
+
+// Reads the Cut-off/Storno/Zahlungsbedingungen fields from the DOM into CONFIG.groupTerms
+// and persists them, without any UI feedback. Used both by the manual save button and
+// automatically before generating a PDF, so generating always uses whatever is currently
+// typed in those fields without requiring a separate save step first.
+function persistGroupTerms() {
+  const cutoffEl = document.getElementById('gterm-cutoffdays');
+  if (cutoffEl) CONFIG.groupTerms.cutOffDays = parseInt(cutoffEl.value) || 0;
+
+  CONFIG.groupTerms.reductionTiers = CONFIG.groupTerms.reductionTiers.map((r, i) => ({
+    labelDe: document.getElementById('rt-labelDe-' + i)?.value ?? r.labelDe,
+    labelEn: document.getElementById('rt-labelEn-' + i)?.value ?? r.labelEn,
+    pct: parseFloat(document.getElementById('rt-pct-' + i)?.value) || 0
+  }));
+
+  CONFIG.groupTerms.cancellationTiers = CONFIG.groupTerms.cancellationTiers.map((r, i) => ({
+    labelDe: document.getElementById('ct-labelDe-' + i)?.value ?? r.labelDe,
+    labelEn: document.getElementById('ct-labelEn-' + i)?.value ?? r.labelEn,
+    pct: parseFloat(document.getElementById('ct-pct-' + i)?.value) || 0,
+    noteDe: document.getElementById('ct-noteDe-' + i)?.value ?? r.noteDe,
+    noteEn: document.getElementById('ct-noteEn-' + i)?.value ?? r.noteEn
+  }));
+
+  CONFIG.groupTerms.paymentPlan = CONFIG.groupTerms.paymentPlan.map((p, i) => ({
+    pct: parseFloat(document.getElementById('pp-pct-' + i)?.value) || 0,
+    timingDe: document.getElementById('pp-timingDe-' + i)?.value ?? p.timingDe,
+    timingEn: document.getElementById('pp-timingEn-' + i)?.value ?? p.timingEn
+  }));
+
+  localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
+}
+
+function saveGroupTerms() {
+  persistGroupTerms();
+  const ok = document.getElementById('gtermsavok');
+  ok.style.display = 'flex';
+  setTimeout(() => { ok.style.display = 'none'; }, 2500);
 }
 
 function renderDiscountSettingsPanel() {
@@ -1270,30 +1309,6 @@ function saveSettings() {
   if (parkingLinkDe) CONFIG.groupTexts.parkingArrivalLinkDe = parkingLinkDe.value;
   const parkingLinkEn = document.getElementById('gt-parkingArrivalLink-en');
   if (parkingLinkEn) CONFIG.groupTexts.parkingArrivalLinkEn = parkingLinkEn.value;
-
-  if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
-  const cutoffEl = document.getElementById('gterm-cutoffdays');
-  if (cutoffEl) CONFIG.groupTerms.cutOffDays = parseInt(cutoffEl.value) || 0;
-
-  CONFIG.groupTerms.reductionTiers = CONFIG.groupTerms.reductionTiers.map((r, i) => ({
-    labelDe: document.getElementById('rt-labelDe-' + i)?.value ?? r.labelDe,
-    labelEn: document.getElementById('rt-labelEn-' + i)?.value ?? r.labelEn,
-    pct: parseFloat(document.getElementById('rt-pct-' + i)?.value) || 0
-  }));
-
-  CONFIG.groupTerms.cancellationTiers = CONFIG.groupTerms.cancellationTiers.map((r, i) => ({
-    labelDe: document.getElementById('ct-labelDe-' + i)?.value ?? r.labelDe,
-    labelEn: document.getElementById('ct-labelEn-' + i)?.value ?? r.labelEn,
-    pct: parseFloat(document.getElementById('ct-pct-' + i)?.value) || 0,
-    noteDe: document.getElementById('ct-noteDe-' + i)?.value ?? r.noteDe,
-    noteEn: document.getElementById('ct-noteEn-' + i)?.value ?? r.noteEn
-  }));
-
-  CONFIG.groupTerms.paymentPlan = CONFIG.groupTerms.paymentPlan.map((p, i) => ({
-    pct: parseFloat(document.getElementById('pp-pct-' + i)?.value) || 0,
-    timingDe: document.getElementById('pp-timingDe-' + i)?.value ?? p.timingDe,
-    timingEn: document.getElementById('pp-timingEn-' + i)?.value ?? p.timingEn
-  }));
 
   localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
   buildDiscountDropdown();
@@ -1455,6 +1470,8 @@ function genGroupOffer() {
     }
   }
 
+  persistGroupTerms();
+
   const salLbl = salEl.options[salEl.selectedIndex].text;
   const isNeutralSalutation = salEl.value.endsWith('n') || salEl.value.endsWith('2');
   const salLine = (isNeutralSalutation ? salLbl : salLbl + ' ' + contactName) + ',';
@@ -1508,16 +1525,16 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;col
 .offer-block-total td{padding:2.5mm 2mm;background:#FAF5E8;border:none;font-size:10.5pt}
 .offer-block-total td:first-child{color:#8B6914}
 .footer-note{font-size:8pt;color:#777;margin:4mm 0;font-style:italic}
-.page2{page-break-before:always;padding-top:4mm}
+.page2{padding-top:4mm}
 .page2-title{font-size:13pt;font-weight:700;margin-bottom:4mm}
 .section-title{font-size:9.5pt;font-weight:700;color:#8B6914;margin:4mm 0 1.5mm}
 .subsection-title{font-size:9pt;font-weight:700;margin:3mm 0 1mm;text-decoration:underline}
 .body-text{font-size:9pt;color:#444;line-height:1.6;margin-bottom:1mm}
 .body-text a{color:#1A56A0}
-.company-footer{position:fixed;bottom:6mm;left:18mm;right:18mm;font-size:7.5pt;color:#666;border-top:0.4pt solid #ddd;padding-top:2mm;line-height:1.6}
+.company-footer{margin-top:8mm;font-size:7.5pt;color:#666;border-top:0.4pt solid #ddd;padding-top:2mm;line-height:1.6}
 .closing{margin-top:6mm}
 .closing p{font-size:9pt;color:#444;line-height:1.6;margin-bottom:2mm}
-@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 26mm 18mm;size:A4}}
+@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 18mm 18mm;size:A4}}
 </style></head><body>
 <div class="header">
   <div class="sender-block">Andermatt Alpine Apartments<br>Gütschgasse 6<br>CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
@@ -1534,7 +1551,6 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;col
 </table>
 ${blocksHtml}
 <div class="footer-note">${t(gt.footerDe, gt.footerEn)}</div>
-<div class="company-footer">Andermatt Alpine Apartments<br>Gütschgasse 6<br>CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
 <div class="page2">
   <div class="page2-title">${t('Preise und Leistungen', 'Prices and Inclusions')}</div>
   ${renderTextBlock(t(gt.pricesInclusionsDe, gt.pricesInclusionsEn))}
