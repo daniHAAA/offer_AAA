@@ -188,28 +188,28 @@ table.pt .muc{color:var(--mu);font-size:12px}
 </div>
 <div id="pane-group" class="pane">
   <div class="sec">
-    <div class="stit"><i class="ti ti-user"></i>Contact</div>
+    <div class="stit"><i class="ti ti-user"></i>Kontakt</div>
     <div class="g2">
-      <div class="fld"><label>Salutation</label><select id="grp-sal"></select></div>
-      <div class="fld"><label>Contact Name</label><input type="text" id="grp-name" placeholder="e.g. Smith"/></div>
+      <div class="fld"><label>Anrede</label><select id="grp-sal"></select></div>
+      <div class="fld"><label>Kontaktname</label><input type="text" id="grp-name" placeholder="z.B. Muster"/></div>
     </div>
     <div class="fld">
-      <label>Intro Text</label>
+      <label>Einleitungstext</label>
       <textarea id="grp-intro" rows="3"></textarea>
     </div>
   </div>
   <div class="sec">
-    <div class="stit"><i class="ti ti-calendar"></i>Stay Dates</div>
+    <div class="stit"><i class="ti ti-calendar"></i>Aufenthaltsdaten</div>
     <div class="cal-wrap">
-      <div class="cal-disp" id="grp-cal-trigger" onclick="toggleCal(event)"><i class="ti ti-calendar-event" style="color:var(--g);font-size:16px"></i><span id="grp-cal-lbl" style="color:var(--mu);flex:1">Select arrival and departure</span><span id="grp-nchip"></span></div>
+      <div class="cal-disp" id="grp-cal-trigger" onclick="toggleCal(event)"><i class="ti ti-calendar-event" style="color:var(--g);font-size:16px"></i><span id="grp-cal-lbl" style="color:var(--mu);flex:1">Anreise und Abreise wählen</span><span id="grp-nchip"></span></div>
     </div>
   </div>
   <div class="sec">
-    <div class="stit"><i class="ti ti-building-community"></i>Offers</div>
+    <div class="stit"><i class="ti ti-building-community"></i>Angebote</div>
     <div id="grp-blocks"></div>
-    <button class="bsm badd" onclick="addGroupBlock()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Add Offer</button>
+    <button class="bsm badd" onclick="addGroupBlock()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Angebot hinzufügen</button>
   </div>
-  <button class="btnp" onclick="genGroupOffer()"><i class="ti ti-file-type-pdf"></i>Generate Group Offer PDF</button>
+  <button class="btnp" onclick="genGroupOffer()"><i class="ti ti-file-type-pdf"></i>Gruppenofferte PDF generieren</button>
   <div id="grpErrMsg" class="err" style="display:none"></div>
 </div>
 <div id="pane-settings" class="pane">
@@ -233,22 +233,9 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div class="sec"><div class="stit"><i class="ti ti-message-circle"></i>Grussformeln</div><div id="s-greet"></div><button class="bsm badd" onclick="addGreet()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Grussformel hinzufügen</button></div>
   <div class="sec"><div class="stit"><i class="ti ti-info-circle"></i>Standardhinweise</div><div id="s-stdinfo"></div></div>
   <div class="sec">
-    <div class="stit"><i class="ti ti-users"></i>Gruppenofferte Texte</div>
-    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Texte werden ausschliesslich in der englischsprachigen Gruppenofferte (PDF) verwendet.</p>
-    <div class="fld" style="margin-bottom:.75rem"><label>Standard-Einleitungstext</label><textarea id="gt-introDefault" rows="3"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Footer-Hinweis</label><textarea id="gt-footer" rows="2"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Prices and Inclusions</label><textarea id="gt-pricesInclusions" rows="3"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Parking and Arrival</label><textarea id="gt-parkingArrival" rows="3"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Parking and Arrival – Link</label><input type="text" id="gt-parkingArrivalLink"></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Check-in and Check-out</label><textarea id="gt-checkInOut" rows="3"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Bicycle and Ski Storage</label><textarea id="gt-bikeSkiStorage" rows="3"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Pets and Smoking</label><textarea id="gt-petsSmoking" rows="3"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Please Note</label><textarea id="gt-pleaseNote" rows="3"></textarea></div>
-    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .5rem">Cancellation and Cut-Off Terms</div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Cut-Off Date</label><textarea id="gt-cutOffDate" rows="2"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Reduction of the Block After Cut-Off</label><textarea id="gt-reductionAfterCutOff" rows="2"></textarea></div>
-    <div class="fld" style="margin-bottom:.75rem"><label>Cancellation Policy</label><textarea id="gt-cancellationPolicy" rows="2"></textarea></div>
-    <div class="fld"><label>Payment Terms</label><textarea id="gt-paymentTerms" rows="2"></textarea></div>
+    <div class="stit"><i class="ti ti-users"></i>Gruppenofferte Texte (DE / EN)</div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Texte werden in der Gruppenofferte (PDF) verwendet, je nach gewählter Sprache (DE/EN oben rechts).</p>
+    <div id="s-grouptexts"></div>
   </div>
   <div class="savebar"><button class="bsm" style="background:var(--dk);color:var(--wh);border-color:var(--dk);padding:9px 20px;font-size:13px" onclick="saveSettings()"><i class="ti ti-device-floppy"></i>Einstellungen speichern</button><span class="savok" id="savok"><i class="ti ti-check"></i>Gespeichert</span></div>
 </div>
@@ -345,19 +332,40 @@ const DEFAULT_CONFIG = {
     catLinkEn: 'alpine.apartments/en/apartments'
   },
   groupTexts: {
-    introDefault: 'Thank you very much for your interest in the Andermatt Alpine Apartments. We are pleased that you are considering staying with us in Andermatt. We are happy to make you the offer below:',
-    footer: 'The price includes bed linen and towels, VAT and visitor\'s tax.',
-    pricesInclusions: 'All prices are quoted in Swiss Francs (CHF) and include VAT and visitor\'s tax. Prices are per apartment and are based on the number of nights and units stated in this offer. A one-off end cleaning fee applies per apartment as shown above.',
-    parkingArrival: 'Parking is available at the Andermatt Reuss underground garage. Further information on arrival and parking can be found at the link below.',
-    parkingArrivalLink: 'https://alpine.apartments/en/arrival/',
-    checkInOut: 'Check-in is from 16:00. Check-out is until 10:00. Early check-in and late check-out may be requested and are subject to availability and an additional fee.',
-    bikeSkiStorage: 'A secure storage room for bicycles and ski equipment is available to guests free of charge, subject to availability.',
-    petsSmoking: 'Pets are not permitted. Smoking is not permitted inside the apartments.',
-    pleaseNote: 'This offer is subject to availability at the time of booking confirmation. Rates and terms may be adjusted for confirmed group bookings.',
-    cutOffDate: 'Unless otherwise agreed, the cut-off date for this block is 6 weeks before arrival. Rooms not confirmed by this date may be released back into general inventory.',
-    reductionAfterCutOff: 'After the cut-off date, the number of units held under this offer may be reduced to reflect confirmed bookings only.',
-    cancellationPolicy: 'Cancellations made more than 30 days before arrival are free of charge. Cancellations within 30 days of arrival are subject to a charge of 100% of the total booking value, unless otherwise agreed in writing.',
-    paymentTerms: 'A deposit of 30% is due upon booking confirmation. The remaining balance is due 30 days before arrival.'
+    introDefaultEn: 'Thank you very much for your interest in the Andermatt Alpine Apartments.\nWe are pleased that you are considering staying with us in Andermatt. We are happy to make you the offer below:',
+    introDefaultDe: 'Vielen Dank für Ihr Interesse an den Andermatt Alpine Apartments.\nWir freuen uns, dass Sie einen Aufenthalt bei uns in Andermatt in Betracht ziehen. Gerne unterbreiten wir Ihnen nachfolgend unser Angebot:',
+    footerEn: 'The price includes bed linen and towels, VAT and visitor\'s tax.',
+    footerDe: 'Der Preis beinhaltet Bett- und Badwäsche, Mehrwertsteuer und Kurtaxe.',
+    pricesInclusionsEn: 'The prices do not include breakfast, which can be added at the Radisson Blu Andermatt Reuss or Restaurant Biselli for an additional fee (separate agreement).\nPlease note that this is a non-binding offer. The above-mentioned offer is subject to change and valid at the time of the request. Prices and apartment availability cannot be guaranteed prior to booking. To confirm your reservation, we kindly ask for a written acknowledgment of this offer.\nThe price includes bed and bath linen, VAT, and tourist tax.',
+    pricesInclusionsDe: 'Die Preise beinhalten kein Frühstück. Dieses kann gegen Aufpreis im Radisson Blu Andermatt Reuss oder im Restaurant Biselli dazugebucht werden (separate Vereinbarung).\nBitte beachten Sie, dass es sich hierbei um ein unverbindliches Angebot handelt. Das oben genannte Angebot kann sich ändern und ist zum Zeitpunkt der Anfrage gültig. Preise und Verfügbarkeit der Apartments können vor der Buchung nicht garantiert werden. Zur Bestätigung Ihrer Reservation bitten wir Sie um eine schriftliche Rückmeldung zu diesem Angebot.\nDer Preis beinhaltet Bett- und Badwäsche, Mehrwertsteuer und Kurtaxe.',
+    additionalInfoHeadingEn: 'Additional Information for Your Stay',
+    additionalInfoHeadingDe: 'Weitere Informationen zu Ihrem Aufenthalt',
+    parkingArrivalEn: 'Our latest information regarding arrival and parking can be found here:',
+    parkingArrivalDe: 'Unsere aktuellen Informationen zu Anreise und Parkplatz finden Sie hier:',
+    parkingArrivalLinkEn: 'https://alpine.apartments/en/arrival/',
+    parkingArrivalLinkDe: 'https://alpine.apartments/arrival/',
+    checkInOutEn: 'Check-in is from 4:00 p.m. and check-out is until 10:00 a.m. Our Front Office is located at Gütschgasse 6, next to the Victorinox shop.\nFor late check-ins after 6:00 p.m., please contact us in advance.',
+    checkInOutDe: 'Check-in ist ab 16:00 Uhr, Check-out bis 10:00 Uhr. Unser Front Office befindet sich an der Gütschgasse 6, neben dem Victorinox-Shop.\nBei einer späten Anreise nach 18:00 Uhr bitten wir Sie, uns im Voraus zu kontaktieren.',
+    bikeSkiStorageEn: 'All apartment buildings have dedicated bicycle and ski storage. Storing bicycles, skis, ski boots, or other sports equipment inside the apartments is not permitted.',
+    bikeSkiStorageDe: 'Alle Apartmenthäuser verfügen über einen eigenen Velo- und Skiraum. Das Lagern von Velos, Skiern, Skischuhen oder anderer Sportausrüstung in den Apartments ist nicht gestattet.',
+    petsSmokingEn: 'Pets and smoking are not allowed in the apartments.',
+    petsSmokingDe: 'Haustiere und Rauchen sind in den Apartments nicht gestattet.',
+    pleaseNoteEn: 'The appearance of the Andermatt Reuss holiday village is continually evolving. Ongoing construction in the vicinity of your apartment may result in some daytime noise.',
+    pleaseNoteDe: 'Das Erscheinungsbild des Feriendorfs Andermatt Reuss entwickelt sich laufend weiter. Baustellen in der Nähe Ihres Apartments können tagsüber zu gewissen Lärmimmissionen führen.',
+    cutOffDateEn: 'The final number of apartments must be confirmed 60 days prior to the event. On the cut-off date, AAA will review the reservation acceptance for the event, release any unreserved rooms for general sale, and determine whether additional reservations can still be accepted at group rates based on availability.',
+    cutOffDateDe: 'Die definitive Anzahl Apartments muss 60 Tage vor dem Anlass bestätigt werden. Am Cut-off-Datum prüft AAA den Reservationsstand für den Anlass, gibt nicht reservierte Einheiten für den freien Verkauf frei und entscheidet je nach Verfügbarkeit, ob weitere Reservationen zum Gruppentarif angenommen werden können.',
+    reductionAfterCutOffEn: 'Up to 30 days before arrival: free reduction of up to 10% of the booked block\n29 to 14 days before arrival: free reduction of up to 5% of the booked block\n13 to 0 days before arrival: no free reduction possible',
+    reductionAfterCutOffDe: 'Bis 30 Tage vor Anreise: kostenlose Reduktion von bis zu 10% des gebuchten Kontingents\n29 bis 14 Tage vor Anreise: kostenlose Reduktion von bis zu 5% des gebuchten Kontingents\n13 bis 0 Tage vor Anreise: keine kostenlose Reduktion möglich',
+    cancellationPolicyEn: 'In the event of a full group cancellation:\n0 to 13 working days before arrival: penalty of 100% of room-night obligations plus applicable taxes\n14 to 55 days before arrival: penalty of 80%\n60 to 90 days before arrival: penalty of 60%\n\nThis contract may be terminated without liability in case of circumstances beyond the control of either party, such as force majeure, war, terrorist acts, government regulations, disasters, strikes, civil unrest, or transportation restrictions, if such circumstances make it illegal or impossible for the hotel to provide facilities or for the group to use them. Cancellation under this clause requires written notification to the other party as soon as reasonably possible, and no later than ten (10) days after becoming aware of the circumstances.',
+    cancellationPolicyDe: 'Im Falle einer vollständigen Stornierung der Gruppe gilt:\n0 bis 13 Arbeitstage vor Anreise: Gebühr von 100% der Zimmernacht-Verpflichtungen zzgl. anfallender Steuern\n14 bis 55 Tage vor Anreise: Gebühr von 80%\n60 bis 90 Tage vor Anreise: Gebühr von 60%\n\nDieser Vertrag kann ohne Haftung beendet werden, falls Umstände ausserhalb der Kontrolle einer der beiden Parteien – wie höhere Gewalt, Krieg, terroristische Handlungen, behördliche Anordnungen, Katastrophen, Streiks, zivile Unruhen oder Transportbeschränkungen – es dem Hotel unmöglich oder rechtswidrig machen, die Räumlichkeiten zur Verfügung zu stellen, oder der Gruppe, diese zu nutzen. Eine Stornierung nach dieser Klausel erfordert eine schriftliche Mitteilung an die andere Partei, sobald dies vernünftigerweise möglich ist, spätestens jedoch zehn (10) Tage nach Kenntnisnahme der Umstände.',
+    paymentTermsEn: 'The payment schedule for your event is as follows:\n50% upon signing this contract\n50% after checking out no longer than 1 Month\n\nThis schedule is based on the details outlined in this contract and may be modified according to the terms.',
+    paymentTermsDe: 'Der Zahlungsplan für Ihren Anlass ist wie folgt:\n50% bei Vertragsunterzeichnung\n50% spätestens 1 Monat nach Check-out\n\nDieser Zahlungsplan basiert auf den in diesem Vertrag festgehaltenen Angaben und kann gemäss den vereinbarten Bedingungen angepasst werden.',
+    closingIntroEn: 'We are looking forward to welcoming you soon in Andermatt and wish you a pleasant journey in advance.',
+    closingIntroDe: 'Wir freuen uns darauf, Sie bald in Andermatt willkommen zu heissen, und wünschen Ihnen schon jetzt eine gute Reise.',
+    closingGreetingEn: 'Kind regards from the Uri Alps',
+    closingGreetingDe: 'Herzliche Grüsse aus den Urner Alpen',
+    closingTeamEn: 'Your Andermatt Alpine Apartments team',
+    closingTeamDe: 'Ihr Andermatt Alpine Apartments Team'
   }
 };
 
@@ -392,10 +400,25 @@ function setLang(l) {
   lang = l;
   document.getElementById('lde').classList.toggle('active', l === 'de');
   document.getElementById('len').classList.toggle('active', l === 'en');
-  buildSalutationOptions();
+  buildSalutationOptions('sal');
+  buildSalutationOptions('grp-sal');
   renderRoomPanels();
   renderExtrasChecklist();
+  renderGroupBlocks();
   updateDateDisplay();
+  syncGroupIntroDefault();
+}
+
+// Swaps the Group Offer intro textarea to the new language's default text, but only
+// if it still holds one of the (untouched) defaults - a custom intro the user typed
+// is never overwritten by a language switch.
+function syncGroupIntroDefault() {
+  const introEl = document.getElementById('grp-intro');
+  const gt = CONFIG.groupTexts || DEFAULT_CONFIG.groupTexts;
+  const current = introEl.value.trim();
+  if (current === '' || current === gt.introDefaultDe.trim() || current === gt.introDefaultEn.trim()) {
+    introEl.value = lang === 'de' ? gt.introDefaultDe : gt.introDefaultEn;
+  }
 }
 
 function goTab(name) {
@@ -408,23 +431,15 @@ function goTab(name) {
 }
 
 const EN_SALUTATIONS = [['ef', 'Dear Ms.'], ['em', 'Dear Mr.'], ['en2', 'Dear Sir or Madam']];
+const DE_SALUTATIONS = [['df', 'Sehr geehrte Frau'], ['dm', 'Sehr geehrter Herr'], ['dn', 'Guten Tag']];
 
-function buildSalutationOptions() {
-  const el = document.getElementById('sal');
-  const opts = lang === 'de'
-    ? [['df', 'Sehr geehrte Frau'], ['dm', 'Sehr geehrter Herr'], ['dn', 'Guten Tag']]
-    : EN_SALUTATIONS;
+function buildSalutationOptions(elementId = 'sal') {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const opts = lang === 'de' ? DE_SALUTATIONS : EN_SALUTATIONS;
   el.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
   const match = opts.find(([v]) => v.charAt(0) === (lang === 'de' ? 'd' : 'e'));
   if (match) el.value = match[0];
-}
-
-// The Group Offer document is always English (per the reference layout), so its
-// salutation dropdown is independent of the DE/EN toggle used elsewhere.
-function buildGroupSalutationOptions() {
-  const el = document.getElementById('grp-sal');
-  if (!el) return;
-  el.innerHTML = EN_SALUTATIONS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
 }
 
 function buildDiscountDropdown() {
@@ -757,11 +772,16 @@ const MONTH_NAMES_EN = ['January', 'February', 'March', 'April', 'May', 'June', 
 const DAY_NAMES_DE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const DAY_NAMES_EN = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const WEEKDAY_FULL_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAY_FULL_DE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
-function formatEnglishDate(d) {
+// Full weekday + day + month + year, in whichever language is currently active
+// (used by the Group Offer PDF, which is generated in either German or English).
+function formatFullDate(d) {
   if (!d) return '';
   const dt = new Date(d);
-  return `${WEEKDAY_FULL_EN[dt.getDay()]}, ${dt.getDate()} ${MONTH_NAMES_EN[dt.getMonth()]} ${dt.getFullYear()}`;
+  return lang === 'de'
+    ? `${WEEKDAY_FULL_DE[dt.getDay()]}, ${dt.getDate()}. ${MONTH_NAMES_DE[dt.getMonth()]} ${dt.getFullYear()}`
+    : `${WEEKDAY_FULL_EN[dt.getDay()]}, ${dt.getDate()} ${MONTH_NAMES_EN[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
 function toggleCal(e) {
@@ -961,12 +981,35 @@ function renderSettingsPanel() {
   document.getElementById('s-stdinfo').innerHTML = [['wlan', 'WLAN'], ['parking', 'Parkplatz'], ['catLink', 'Kategorie-Link']].map(([k, lbl]) => `<div style="margin-bottom:1rem"><div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${lbl}</div><div class="g2"><div class="fld"><label>DE</label><input type="text" id="si-${k}-de" value="${CONFIG.stdinfo[k + 'De'] || ''}"></div><div class="fld"><label>EN</label><input type="text" id="si-${k}-en" value="${CONFIG.stdinfo[k + 'En'] || ''}"></div></div></div>`).join('');
 }
 
+const GROUP_TEXT_FIELDS = [
+  ['introDefault', 'Standard-Einleitungstext'],
+  ['footer', 'Footer-Hinweis (nach den Angeboten)'],
+  ['pricesInclusions', 'Prices and Inclusions'],
+  ['parkingArrival', 'Parking and Arrival'],
+  ['checkInOut', 'Check-in and Check-out'],
+  ['bikeSkiStorage', 'Bicycle and Ski Storage'],
+  ['petsSmoking', 'Pets and Smoking'],
+  ['pleaseNote', 'Please Note'],
+  ['cutOffDate', 'Cut-Off Date'],
+  ['reductionAfterCutOff', 'Reduction of the Block After Cut-Off'],
+  ['cancellationPolicy', 'Cancellation Policy'],
+  ['paymentTerms', 'Payment Terms'],
+  ['closingIntro', 'Schlusstext (vor der Grussformel)'],
+  ['closingGreeting', 'Grussformel'],
+  ['closingTeam', 'Team-Signatur']
+];
+
 function renderGroupTextsSettings() {
   if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
-  Object.keys(CONFIG.groupTexts).forEach(key => {
-    const el = document.getElementById('gt-' + key);
-    if (el) el.value = CONFIG.groupTexts[key] || '';
-  });
+  const c = document.getElementById('s-grouptexts');
+  if (!c) return;
+  const gt = CONFIG.groupTexts;
+  c.innerHTML = GROUP_TEXT_FIELDS.map(([key, lbl], idx) => `<div style="${idx > 0 ? 'padding-top:.75rem;border-top:1px solid var(--br);margin-top:.75rem' : ''}">
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${lbl}</div>
+    <div class="fld" style="margin-bottom:6px"><label>DE</label><textarea id="gt-${key}-de" rows="2">${gt[key + 'De'] || ''}</textarea></div>
+    <div class="fld"><label>EN</label><textarea id="gt-${key}-en" rows="2">${gt[key + 'En'] || ''}</textarea></div>
+    ${key === 'parkingArrival' ? `<div class="g2" style="margin-top:6px"><div class="fld"><label>Link DE</label><input type="text" id="gt-parkingArrivalLink-de" value="${gt.parkingArrivalLinkDe || ''}"></div><div class="fld"><label>Link EN</label><input type="text" id="gt-parkingArrivalLink-en" value="${gt.parkingArrivalLinkEn || ''}"></div></div>` : ''}
+  </div>`).join('');
 }
 
 function renderDiscountSettingsPanel() {
@@ -1110,10 +1153,16 @@ function saveSettings() {
   });
 
   if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
-  Object.keys(CONFIG.groupTexts).forEach(key => {
-    const el = document.getElementById('gt-' + key);
-    if (el) CONFIG.groupTexts[key] = el.value;
+  GROUP_TEXT_FIELDS.forEach(([key]) => {
+    const de = document.getElementById('gt-' + key + '-de');
+    if (de) CONFIG.groupTexts[key + 'De'] = de.value;
+    const en = document.getElementById('gt-' + key + '-en');
+    if (en) CONFIG.groupTexts[key + 'En'] = en.value;
   });
+  const parkingLinkDe = document.getElementById('gt-parkingArrivalLink-de');
+  if (parkingLinkDe) CONFIG.groupTexts.parkingArrivalLinkDe = parkingLinkDe.value;
+  const parkingLinkEn = document.getElementById('gt-parkingArrivalLink-en');
+  if (parkingLinkEn) CONFIG.groupTexts.parkingArrivalLinkEn = parkingLinkEn.value;
 
   localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
   buildDiscountDropdown();
@@ -1126,203 +1175,244 @@ function saveSettings() {
   renderExtrasChecklist();
 }
 
-function createGroupBlock() {
+// A Group Offer is a list of "Offer N" blocks; each block can bundle several
+// apartment categories together (matching the reference document, where a single
+// "Offer 1" lists e.g. both Studio Superior and Studio Deluxe as separate lines).
+function createGroupCategoryLine() {
   return { size: 'studio', cat: 'Standard', units: 1, offerText: '', priceMode: 'total', priceVal: '' };
 }
 
-let groupOffer = { blocks: [createGroupBlock()] };
-let groupHistory = JSON.parse(localStorage.getItem('aaa_grp_h') || '[]');
+function createGroupOfferBlock() {
+  return { lines: [createGroupCategoryLine()] };
+}
+
+let groupOffer = { blocks: [createGroupOfferBlock()] };
 
 function renderGroupBlocks() {
   const c = document.getElementById('grp-blocks');
   if (!c) return;
-  c.innerHTML = groupOffer.blocks.map((b, i) => `<div class="cicard">
-    <div class="cihdr"><span class="citit">Offer ${i + 1}</span>${groupOffer.blocks.length > 1 ? `<button class="bsm bdng" onclick="removeGroupBlock(${i})"><i class="ti ti-trash"></i></button>` : ''}</div>
-    <div class="fld" style="margin-bottom:12px"><label>Category</label><select onchange="setGroupBlockCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(b.size, b.cat))}</select></div>
-    <div class="g2">
-      <div class="fld"><label>Units</label><input type="number" min="1" value="${b.units}" oninput="groupOffer.blocks[${i}].units=this.value"></div>
-      <div class="fld"><label>Offer</label><input type="text" value="${b.offerText}" placeholder="e.g. Special rate" oninput="groupOffer.blocks[${i}].offerText=this.value"></div>
+  const t = (de, en) => lang === 'de' ? de : en;
+
+  c.innerHTML = groupOffer.blocks.map((block, bi) => `<div class="cicard">
+    <div class="cihdr">
+      <span class="citit">${t('Angebot', 'Offer')} ${bi + 1}</span>
+      ${groupOffer.blocks.length > 1 ? `<button class="bsm bdng" onclick="removeGroupBlock(${bi})"><i class="ti ti-trash"></i></button>` : ''}
     </div>
-    <div class="togw">
-      <button class="tbtn ${b.priceMode === 'total' ? 'active' : ''}" onclick="setGroupPriceMode(${i},'total')">Total price</button>
-      <button class="tbtn ${b.priceMode === 'perNight' ? 'active' : ''}" onclick="setGroupPriceMode(${i},'perNight')">Price per night</button>
-    </div>
-    <div class="fld"><input type="number" min="0" value="${b.priceVal}" placeholder="${b.priceMode === 'total' ? 'Total CHF' : 'Price/night CHF'}" oninput="groupOffer.blocks[${i}].priceVal=this.value"></div>
+    ${block.lines.map((line, li) => `<div style="border-top:1px solid var(--br);padding-top:.75rem;margin-top:.75rem">
+      ${block.lines.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="bsm bdng" onclick="removeGroupLine(${bi},${li})"><i class="ti ti-trash"></i>${t('Kategorie entfernen', 'Remove category')}</button></div>` : ''}
+      <div class="fld" style="margin-bottom:12px"><label>${t('Kategorie', 'Category')}</label><select onchange="setGroupLineCode(${bi},${li},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(line.size, line.cat))}</select></div>
+      <div class="g2">
+        <div class="fld"><label>${t('Einheiten', 'Units')}</label><input type="number" min="1" value="${line.units}" oninput="groupOffer.blocks[${bi}].lines[${li}].units=this.value"></div>
+        <div class="fld"><label>${t('Angebot', 'Offer')}</label><input type="text" value="${line.offerText}" placeholder="${t('z.B. Sonderpreis', 'e.g. Special rate')}" oninput="groupOffer.blocks[${bi}].lines[${li}].offerText=this.value"></div>
+      </div>
+      <div class="togw">
+        <button class="tbtn ${line.priceMode === 'total' ? 'active' : ''}" onclick="setGroupLinePriceMode(${bi},${li},'total')">${t('Gesamtpreis', 'Total price')}</button>
+        <button class="tbtn ${line.priceMode === 'perNight' ? 'active' : ''}" onclick="setGroupLinePriceMode(${bi},${li},'perNight')">${t('Preis/Nacht', 'Price per night')}</button>
+      </div>
+      <div class="fld"><input type="number" min="0" value="${line.priceVal}" placeholder="${line.priceMode === 'total' ? t('Gesamtpreis CHF', 'Total CHF') : t('Preis/Nacht CHF', 'Price/night CHF')}" oninput="groupOffer.blocks[${bi}].lines[${li}].priceVal=this.value"></div>
+    </div>`).join('')}
+    <button class="bsm badd" style="margin-top:.75rem" onclick="addGroupLine(${bi})"><i class="ti ti-plus"></i>${t('Kategorie hinzufügen', 'Add Category')}</button>
   </div>`).join('');
 }
 
-function setGroupBlockCode(i, code) {
+function setGroupLineCode(bi, li, code) {
   const { size, cat } = parseRoomTypeCode(code);
-  groupOffer.blocks[i].size = size;
-  groupOffer.blocks[i].cat = cat;
+  groupOffer.blocks[bi].lines[li].size = size;
+  groupOffer.blocks[bi].lines[li].cat = cat;
 }
 
-function setGroupPriceMode(i, m) {
-  groupOffer.blocks[i].priceMode = m;
-  groupOffer.blocks[i].priceVal = '';
+function setGroupLinePriceMode(bi, li, m) {
+  groupOffer.blocks[bi].lines[li].priceMode = m;
+  groupOffer.blocks[bi].lines[li].priceVal = '';
   renderGroupBlocks();
 }
 
 function addGroupBlock() {
   if (groupOffer.blocks.length < 10) {
-    groupOffer.blocks.push(createGroupBlock());
+    groupOffer.blocks.push(createGroupOfferBlock());
     renderGroupBlocks();
   }
 }
 
-function removeGroupBlock(i) {
+function removeGroupBlock(bi) {
   if (groupOffer.blocks.length <= 1) return;
-  groupOffer.blocks.splice(i, 1);
+  groupOffer.blocks.splice(bi, 1);
   renderGroupBlocks();
 }
 
-function computeGroupBlockPricing(b, nights) {
-  const cleaning = CONFIG.cleaning[b.size] || 105;
-  const units = parseInt(b.units) || 1;
-  const priceVal = parseFloat(b.priceVal) || 0;
-  const perNight = b.priceMode === 'total'
+function addGroupLine(bi) {
+  groupOffer.blocks[bi].lines.push(createGroupCategoryLine());
+  renderGroupBlocks();
+}
+
+function removeGroupLine(bi, li) {
+  if (groupOffer.blocks[bi].lines.length <= 1) return;
+  groupOffer.blocks[bi].lines.splice(li, 1);
+  renderGroupBlocks();
+}
+
+function computeGroupLinePricing(line, nights) {
+  const cleaning = CONFIG.cleaning[line.size] || 105;
+  const units = parseInt(line.units) || 1;
+  const priceVal = parseFloat(line.priceVal) || 0;
+  const perNight = line.priceMode === 'total'
     ? (nights > 0 && units > 0 ? (priceVal - cleaning) / nights / units : 0)
     : priceVal;
   const perApartment = perNight * nights + cleaning;
-  return { fullCat: SIZE_LABELS[b.size] + ' ' + b.cat, units, offerText: b.offerText, cleaning, perNight, perApartment };
+  return { fullCat: SIZE_LABELS[line.size] + ' ' + line.cat, units, offerText: line.offerText, cleaning, perNight, perApartment };
+}
+
+// Renders a multi-line settings/reference text (paragraphs separated by \n, blank
+// lines preserved as extra spacing) as a sequence of <p> tags for the PDF.
+function renderTextBlock(text) {
+  return (text || '').split('\n').map(line => line.trim() === '' ? '<div style="height:2mm"></div>' : `<p class="body-text">${line}</p>`).join('');
 }
 
 function genGroupOffer() {
   const err = document.getElementById('grpErrMsg');
   err.style.display = 'none';
 
+  const t = (de, en) => lang === 'de' ? de : en;
   const salEl = document.getElementById('grp-sal');
   const contactName = document.getElementById('grp-name').value.trim();
   const nights = getNights();
 
   if (!contactName) {
-    err.textContent = 'Please enter a contact name.';
+    err.textContent = t('Bitte Kontaktname eingeben.', 'Please enter a contact name.');
     err.style.display = 'block';
     return;
   }
   if (nights <= 0) {
-    err.textContent = 'Please select the stay dates.';
+    err.textContent = t('Bitte Aufenthaltsdaten wählen.', 'Please select the stay dates.');
     err.style.display = 'block';
     return;
   }
-  for (let i = 0; i < groupOffer.blocks.length; i++) {
-    if (!(parseFloat(groupOffer.blocks[i].priceVal) > 0)) {
-      err.textContent = `Offer ${i + 1}: price is missing.`;
-      err.style.display = 'block';
-      return;
+  for (let bi = 0; bi < groupOffer.blocks.length; bi++) {
+    const lines = groupOffer.blocks[bi].lines;
+    for (let li = 0; li < lines.length; li++) {
+      if (!(parseFloat(lines[li].priceVal) > 0)) {
+        err.textContent = t(`Angebot ${bi + 1}: Preis fehlt.`, `Offer ${bi + 1}: price is missing.`);
+        err.style.display = 'block';
+        return;
+      }
     }
   }
 
   const salLbl = salEl.options[salEl.selectedIndex].text;
   const isNeutralSalutation = salEl.value.endsWith('n') || salEl.value.endsWith('2');
   const salLine = (isNeutralSalutation ? salLbl : salLbl + ' ' + contactName) + ',';
-  const introText = document.getElementById('grp-intro').value.trim() || CONFIG.groupTexts.introDefault;
-
-  const today = new Date();
-  const dateLine = `Andermatt, ${formatEnglishDate(today)}`;
-
-  const blockData = groupOffer.blocks.map(b => computeGroupBlockPricing(b, nights));
-
-  const blocksHtml = blockData.map((b, i) => `<div class="offer-block">
-    <div class="offer-block-title">Offer ${i + 1}</div>
-    <table class="offer-table">
-      <tr><td>Category</td><td>${b.fullCat}</td></tr>
-      <tr><td>Units</td><td>${b.units}</td></tr>
-      <tr><td>Offer</td><td>${b.offerText || '–'}</td></tr>
-      <tr><td>Price per Night</td><td>${formatCurrency(b.perNight)}</td></tr>
-      <tr><td>One-off cleaning fee</td><td>${formatCurrency(b.cleaning)}</td></tr>
-      <tr class="offer-row-total"><td>Price per apartment</td><td><strong>${formatCurrency(b.perApartment)}</strong></td></tr>
-    </table>
-  </div>`).join('');
-
   const gt = CONFIG.groupTexts;
-  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+  const introText = document.getElementById('grp-intro').value.trim() || t(gt.introDefaultDe, gt.introDefaultEn);
+
+  const dateLine = `Andermatt, ${formatFullDate(new Date())}`;
+
+  const blocksHtml = groupOffer.blocks.map((block, bi) => {
+    const linesHtml = block.lines.map(line => {
+      const b = computeGroupLinePricing(line, nights);
+      return `<table class="offer-table">
+      <tr><td>${t('Kategorie', 'Category')}</td><td>${b.fullCat}</td></tr>
+      <tr><td>${t('Einheiten', 'Units')}</td><td>${b.units}</td></tr>
+      <tr><td>${t('Angebot', 'Offer')}</td><td>${b.offerText || '–'}</td></tr>
+      <tr><td>${t('Preis pro Nacht', 'Price per Night')}</td><td>${formatCurrency(b.perNight)}</td></tr>
+      <tr><td>${t('Einmalige Endreinigung', 'One-off cleaning fee')}</td><td>${formatCurrency(b.cleaning)}</td></tr>
+      <tr class="offer-row-total"><td>${t('Preis pro Apartment', 'Price per apartment')}</td><td><strong>${formatCurrency(b.perApartment)}</strong></td></tr>
+    </table>`;
+    }).join('<div style="height:3mm"></div>');
+    return `<div class="offer-block">
+    <div class="offer-block-title">${t('Angebot', 'Offer')} ${bi + 1}</div>
+    ${linesHtml}
+  </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8">
 <title>Group_Offer_${contactName.replace(/\s+/g, '_')}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 14mm 18mm}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:0.4pt solid #ddd}
-.logo{font-size:13pt;font-weight:700}.sub{font-size:7.5pt;color:#8B6914;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:1.5mm}
-.meta{text-align:right;font-size:8pt;color:#666}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 24mm 18mm}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm}
+.sender-block{font-size:7.5pt;color:#666;line-height:1.7}
+.wordmark{font-size:15pt;font-weight:800;letter-spacing:.05em;text-align:right;line-height:1.3;white-space:nowrap}
+.wordmark span{display:block;font-size:8pt;font-weight:500;letter-spacing:.18em;color:#444}
+.date-line{font-size:9pt;color:#1a1a1a;margin-bottom:6mm}
 .group-title{font-size:16pt;font-weight:700;margin-bottom:5mm}
 .salutation{font-size:11pt;margin-bottom:4mm}
-.intro{font-size:9pt;color:#444;line-height:1.7;margin-bottom:6mm}
+.intro p{font-size:9pt;color:#444;line-height:1.7;margin-bottom:3mm}
 .stay-details{border-collapse:collapse;margin-bottom:6mm}
 .stay-details td{padding:1mm 4mm 1mm 0;font-size:9pt}
-.stay-details td:first-child{color:#666}
+.stay-details td:first-child{font-weight:700}
 .offer-block{margin-bottom:5mm}
 .offer-block-title{font-size:11pt;font-weight:700;padding-bottom:1.5mm;border-bottom:1pt solid #8B6914;margin-bottom:2mm}
-.offer-table{width:100%;border-collapse:collapse;font-size:9pt}
-.offer-table td{padding:1.8mm 2mm;border-bottom:0.3pt solid #eee}
-.offer-table td:first-child{color:#666;width:45%}
-.offer-row-total td{border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.5mm;font-size:10pt}
+.offer-table{width:100%;border-collapse:collapse;font-size:9pt;border:0.4pt solid #ccc}
+.offer-table td{padding:1.8mm 2mm;border:0.4pt solid #eee}
+.offer-table td:first-child{font-weight:700;color:#444;width:45%}
+.offer-row-total td{border-top:0.8pt solid #aaa;font-size:10pt}
 .footer-note{font-size:8pt;color:#777;margin:4mm 0;font-style:italic}
 .page2{page-break-before:always;padding-top:4mm}
 .page2-title{font-size:13pt;font-weight:700;margin-bottom:4mm}
 .section-title{font-size:9.5pt;font-weight:700;color:#8B6914;margin:4mm 0 1.5mm}
-.subsection-title{font-size:9pt;font-weight:700;margin:3mm 0 1mm}
+.subsection-title{font-size:9pt;font-weight:700;margin:3mm 0 1mm;text-decoration:underline}
 .body-text{font-size:9pt;color:#444;line-height:1.6;margin-bottom:1mm}
 .body-text a{color:#1A56A0}
-.company-footer{position:fixed;bottom:6mm;left:18mm;right:18mm;font-size:7.5pt;color:#666;border-top:0.4pt solid #ddd;padding-top:2mm}
-@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 24mm 18mm;size:A4}}
+.company-footer{position:fixed;bottom:6mm;left:18mm;right:18mm;font-size:7.5pt;color:#666;border-top:0.4pt solid #ddd;padding-top:2mm;line-height:1.6}
+.closing{margin-top:6mm}
+.closing p{font-size:9pt;color:#444;line-height:1.6;margin-bottom:2mm}
+@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 26mm 18mm;size:A4}}
 </style></head><body>
 <div class="header">
-  <div><div class="logo">Andermatt Alpine Apartments</div><div class="sub">Reservations · Offerte Tool</div></div>
-  <div class="meta">${dateLine}</div>
+  <div class="sender-block">Andermatt Alpine Apartments<br>Gütschgasse 6<br>CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
+  <div class="wordmark">ANDERMATT<span>ALPINE APARTMENTS</span></div>
 </div>
-<div class="group-title">Group Offer</div>
+<div class="date-line">${dateLine}</div>
+<div class="group-title">${t('Gruppenofferte', 'Group Offer')}</div>
 <div class="salutation">${salLine}</div>
-<div class="intro">${introText}</div>
+<div class="intro">${renderTextBlock(introText)}</div>
 <table class="stay-details">
-  <tr><td>Arrival date:</td><td>${formatEnglishDate(arrivalDate)}</td></tr>
-  <tr><td>Departure date:</td><td>${formatEnglishDate(departureDate)}</td></tr>
-  <tr><td>Duration:</td><td>${nights} nights</td></tr>
+  <tr><td>${t('Anreisedatum', 'Arrival date')}</td><td>${formatFullDate(arrivalDate)}</td></tr>
+  <tr><td>${t('Abreisedatum', 'Departure date')}</td><td>${formatFullDate(departureDate)}</td></tr>
+  <tr><td>${t('Dauer', 'Duration')}</td><td>${nights} ${t('Nächte', 'nights')}</td></tr>
 </table>
 ${blocksHtml}
-<div class="footer-note">${gt.footer}</div>
+<div class="footer-note">${t(gt.footerDe, gt.footerEn)}</div>
+<div class="company-footer">Andermatt Alpine Apartments<br>Gütschgasse 6<br>CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
 <div class="page2">
-  <div class="page2-title">Prices and Inclusions</div>
-  <p class="body-text">${gt.pricesInclusions}</p>
-  <div class="section-title">Parking and Arrival</div>
-  <p class="body-text">${gt.parkingArrival} <a href="${gt.parkingArrivalLink}">${gt.parkingArrivalLink}</a></p>
-  <div class="section-title">Check-in and Check-out</div>
-  <p class="body-text">${gt.checkInOut}</p>
-  <div class="section-title">Bicycle and Ski Storage</div>
-  <p class="body-text">${gt.bikeSkiStorage}</p>
-  <div class="section-title">Pets and Smoking</div>
-  <p class="body-text">${gt.petsSmoking}</p>
-  <div class="section-title">Please Note</div>
-  <p class="body-text">${gt.pleaseNote}</p>
-  <div class="section-title">Cancellation and Cut-Off Terms</div>
-  <div class="subsection-title">Cut-Off Date</div>
-  <p class="body-text">${gt.cutOffDate}</p>
-  <div class="subsection-title">Reduction of the Block After Cut-Off</div>
-  <p class="body-text">${gt.reductionAfterCutOff}</p>
-  <div class="subsection-title">Cancellation Policy</div>
-  <p class="body-text">${gt.cancellationPolicy}</p>
-  <div class="subsection-title">Payment Terms</div>
-  <p class="body-text">${gt.paymentTerms}</p>
+  <div class="page2-title">${t('Preise und Leistungen', 'Prices and Inclusions')}</div>
+  ${renderTextBlock(t(gt.pricesInclusionsDe, gt.pricesInclusionsEn))}
+  <div class="section-title" style="margin-top:6mm">${t(gt.additionalInfoHeadingDe, gt.additionalInfoHeadingEn)}</div>
+  <div class="subsection-title">${t('Parkplatz und Anreise', 'Parking and Arrival')}</div>
+  <p class="body-text">${t(gt.parkingArrivalDe, gt.parkingArrivalEn)} <a href="${t(gt.parkingArrivalLinkDe, gt.parkingArrivalLinkEn)}">${t(gt.parkingArrivalLinkDe, gt.parkingArrivalLinkEn)}</a></p>
+  <div class="subsection-title">${t('Check-in und Check-out', 'Check-in and Check-out')}</div>
+  ${renderTextBlock(t(gt.checkInOutDe, gt.checkInOutEn))}
+  <div class="subsection-title">${t('Velo- und Skiraum', 'Bicycle and Ski Storage')}</div>
+  <p class="body-text">${t(gt.bikeSkiStorageDe, gt.bikeSkiStorageEn)}</p>
+  <div class="subsection-title">${t('Haustiere und Rauchen', 'Pets and Smoking')}</div>
+  <p class="body-text">${t(gt.petsSmokingDe, gt.petsSmokingEn)}</p>
+  <div class="subsection-title">${t('Bitte beachten Sie', 'Please Note')}</div>
+  <p class="body-text">${t(gt.pleaseNoteDe, gt.pleaseNoteEn)}</p>
+  <div class="section-title">${t('Storno- und Cut-off-Bedingungen', 'Cancellation and Cut-Off Terms')}</div>
+  <div class="subsection-title">${t('Cut-off-Datum', 'Cut-Off Date')}</div>
+  <p class="body-text">${t(gt.cutOffDateDe, gt.cutOffDateEn)}</p>
+  <div class="subsection-title">${t('Reduktion des Kontingents nach Cut-off', 'Reduction of the Block After Cut-Off')}</div>
+  ${renderTextBlock(t(gt.reductionAfterCutOffDe, gt.reductionAfterCutOffEn))}
+  <div class="subsection-title">${t('Stornobedingungen', 'Cancellation Policy')}</div>
+  ${renderTextBlock(t(gt.cancellationPolicyDe, gt.cancellationPolicyEn))}
+  <div class="subsection-title">${t('Zahlungsbedingungen', 'Payment Terms')}</div>
+  ${renderTextBlock(t(gt.paymentTermsDe, gt.paymentTermsEn))}
+  <div class="closing">
+    <p>${t(gt.closingIntroDe, gt.closingIntroEn)}</p>
+    <p>${t(gt.closingGreetingDe, gt.closingGreetingEn)}</p>
+    <p>${t(gt.closingTeamDe, gt.closingTeamEn)}</p>
+  </div>
 </div>
-<div class="company-footer">Andermatt Alpine Apartments | Gütschgasse 6 | CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
+<div class="company-footer">Andermatt Alpine Apartments<br>Gütschgasse 6<br>CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
 </body></html>`;
 
   const printWin = window.open('', '_blank', 'width=900,height=700');
-  if (!printWin) { alert('Please disable your pop-up blocker.'); return; }
+  if (!printWin) { alert(t('Bitte Pop-up-Blocker deaktivieren.', 'Please disable your pop-up blocker.')); return; }
 
   printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
   triggerPrintWhenReady(printWin);
-
-  const totalApartments = groupOffer.blocks.reduce((s, b) => s + (parseInt(b.units) || 0), 0);
-  groupHistory.unshift({
-    date: today.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-    contactName,
-    blockCount: groupOffer.blocks.length,
-    totalApartments
-  });
-  if (groupHistory.length > 20) groupHistory.pop();
-  localStorage.setItem('aaa_grp_h', JSON.stringify(groupHistory));
 }
 
 function copyOut() {
@@ -1630,14 +1720,14 @@ ${nrfHint ? `<p class="nrf-hint">${nrfHint}</p>` : ''}
   document.getElementById('plbl').textContent = 'PDF speichern';
 }
 
-buildSalutationOptions();
+buildSalutationOptions('sal');
+buildSalutationOptions('grp-sal');
 renderRoomTabs();
 renderRoomPanels();
 renderExtrasChecklist();
 buildDiscountDropdown();
-buildGroupSalutationOptions();
 renderGroupBlocks();
-document.getElementById('grp-intro').value = (CONFIG.groupTexts || DEFAULT_CONFIG.groupTexts).introDefault;
+syncGroupIntroDefault();
 </script>
 </body>
 </html>
