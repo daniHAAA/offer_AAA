@@ -134,6 +134,7 @@ table.pt .muc{color:var(--mu);font-size:12px}
 <div class="tabs">
   <button class="tab active" onclick="goTab('create')"><i class="ti ti-file-plus"></i>Offerte erstellen</button>
   <button class="tab" onclick="goTab('history')"><i class="ti ti-history"></i>Letzte Offerten</button>
+  <button class="tab" onclick="goTab('group')"><i class="ti ti-users"></i>Gruppenofferte</button>
   <button class="tab" onclick="goTab('settings')"><i class="ti ti-settings"></i>Einstellungen</button>
 </div>
 <div id="pane-create" class="pane active">
@@ -185,6 +186,32 @@ table.pt .muc{color:var(--mu);font-size:12px}
     <div id="histlist"></div>
   </div>
 </div>
+<div id="pane-group" class="pane">
+  <div class="sec">
+    <div class="stit"><i class="ti ti-user"></i>Contact</div>
+    <div class="g2">
+      <div class="fld"><label>Salutation</label><select id="grp-sal"></select></div>
+      <div class="fld"><label>Contact Name</label><input type="text" id="grp-name" placeholder="e.g. Smith"/></div>
+    </div>
+    <div class="fld">
+      <label>Intro Text</label>
+      <textarea id="grp-intro" rows="3"></textarea>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="stit"><i class="ti ti-calendar"></i>Stay Dates</div>
+    <div class="cal-wrap">
+      <div class="cal-disp" id="grp-cal-trigger" onclick="toggleCal(event)"><i class="ti ti-calendar-event" style="color:var(--g);font-size:16px"></i><span id="grp-cal-lbl" style="color:var(--mu);flex:1">Select arrival and departure</span><span id="grp-nchip"></span></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="stit"><i class="ti ti-building-community"></i>Offers</div>
+    <div id="grp-blocks"></div>
+    <button class="bsm badd" onclick="addGroupBlock()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Add Offer</button>
+  </div>
+  <button class="btnp" onclick="genGroupOffer()"><i class="ti ti-file-type-pdf"></i>Generate Group Offer PDF</button>
+  <div id="grpErrMsg" class="err" style="display:none"></div>
+</div>
 <div id="pane-settings" class="pane">
   <div class="sec"><div class="stit"><i class="ti ti-home"></i>Endreinigung (CHF)</div><div id="s-clean"></div></div>
   <div class="sec"><div class="stit"><i class="ti ti-tag"></i>Rate Codes</div><p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Platzhalter <code style="background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px">{days}</code> = Stornotage je nach Saison</p><div id="s-rates"></div><button class="bsm badd" onclick="addRate()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Rate Code hinzufügen</button></div>
@@ -205,12 +232,54 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div class="sec"><div class="stit"><i class="ti ti-writing"></i>Brieftexte DE / EN</div><div id="s-texts"></div></div>
   <div class="sec"><div class="stit"><i class="ti ti-message-circle"></i>Grussformeln</div><div id="s-greet"></div><button class="bsm badd" onclick="addGreet()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Grussformel hinzufügen</button></div>
   <div class="sec"><div class="stit"><i class="ti ti-info-circle"></i>Standardhinweise</div><div id="s-stdinfo"></div></div>
+  <div class="sec">
+    <div class="stit"><i class="ti ti-users"></i>Gruppenofferte Texte</div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Texte werden ausschliesslich in der englischsprachigen Gruppenofferte (PDF) verwendet.</p>
+    <div class="fld" style="margin-bottom:.75rem"><label>Standard-Einleitungstext</label><textarea id="gt-introDefault" rows="3"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Footer-Hinweis</label><textarea id="gt-footer" rows="2"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Prices and Inclusions</label><textarea id="gt-pricesInclusions" rows="3"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Parking and Arrival</label><textarea id="gt-parkingArrival" rows="3"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Parking and Arrival – Link</label><input type="text" id="gt-parkingArrivalLink"></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Check-in and Check-out</label><textarea id="gt-checkInOut" rows="3"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Bicycle and Ski Storage</label><textarea id="gt-bikeSkiStorage" rows="3"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Pets and Smoking</label><textarea id="gt-petsSmoking" rows="3"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Please Note</label><textarea id="gt-pleaseNote" rows="3"></textarea></div>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .5rem">Cancellation and Cut-Off Terms</div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Cut-Off Date</label><textarea id="gt-cutOffDate" rows="2"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Reduction of the Block After Cut-Off</label><textarea id="gt-reductionAfterCutOff" rows="2"></textarea></div>
+    <div class="fld" style="margin-bottom:.75rem"><label>Cancellation Policy</label><textarea id="gt-cancellationPolicy" rows="2"></textarea></div>
+    <div class="fld"><label>Payment Terms</label><textarea id="gt-paymentTerms" rows="2"></textarea></div>
+  </div>
   <div class="savebar"><button class="bsm" style="background:var(--dk);color:var(--wh);border-color:var(--dk);padding:9px 20px;font-size:13px" onclick="saveSettings()"><i class="ti ti-device-floppy"></i>Einstellungen speichern</button><span class="savok" id="savok"><i class="ti ti-check"></i>Gespeichert</span></div>
 </div>
 </div>
 <script>
 const SIZE_LABELS = { studio: 'Studio', '1br': '1-Bedroom', '2br': '2-Bedroom', '3br': '3-Bedroom', '4br': '4-Bedroom' };
+const SIZE_ORDER = ['studio', '1br', '2br', '3br', '4br'];
 const CATEGORIES = ['Standard', 'Superior', 'Deluxe', 'Premium', 'Select Collection'];
+
+// Room Type Code system: A + category letter + size digit + K (e.g. AS0K = Standard Studio)
+const SIZE_TO_DIGIT = { studio: '0', '1br': '1', '2br': '2', '3br': '3', '4br': '4' };
+const DIGIT_TO_SIZE = { '0': 'studio', '1': '1br', '2': '2br', '3': '3br', '4': '4br' };
+const CATEGORY_TO_LETTER = { Standard: 'S', Superior: 'U', Deluxe: 'D', Premium: 'P', 'Select Collection': 'E' };
+const LETTER_TO_CATEGORY = { S: 'Standard', U: 'Superior', D: 'Deluxe', P: 'Premium', E: 'Select Collection' };
+
+function getRoomTypeCode(size, cat) {
+  return 'A' + (CATEGORY_TO_LETTER[cat] || 'S') + (SIZE_TO_DIGIT[size] || '0') + 'K';
+}
+
+function parseRoomTypeCode(code) {
+  const letter = code.charAt(1);
+  const digit = code.charAt(2);
+  return { size: DIGIT_TO_SIZE[digit] || 'studio', cat: LETTER_TO_CATEGORY[letter] || 'Standard' };
+}
+
+function buildRoomTypeCodeOptions(selectedCode) {
+  return CATEGORIES.map(cat => SIZE_ORDER.map(size => {
+    const code = getRoomTypeCode(size, cat);
+    return `<option value="${code}" ${code === selectedCode ? 'selected' : ''}>${code} – ${SIZE_LABELS[size]} ${cat}</option>`;
+  }).join('')).join('');
+}
 
 let lang = 'de';
 let mode = 'compare';
@@ -239,9 +308,14 @@ const DEFAULT_CONFIG = {
   extras: [
     { id: 'eb', lDe: 'Extrabett', lEn: 'Extra bed', price: 40, perNight: true, comp: false, qty: false },
     { id: 'bb', lDe: 'Babybed / Cot', lEn: 'Baby bed / Cot', price: 0, perNight: false, comp: true, qty: false },
-    { id: 'eci', lDe: 'Early Check-in', lEn: 'Early check-in', price: 50, perNight: false, comp: false, qty: false },
-    { id: 'lco', lDe: 'Late Check-out', lEn: 'Late check-out', price: 50, perNight: false, comp: false, qty: false },
-    { id: 'sc', lDe: 'Soft Cleaning', lEn: 'Soft cleaning', price: 80, perNight: false, comp: false, qty: true }
+    { id: 'eci', lDe: 'Early Check-in', lEn: 'Early check-in', price: 88, perNight: false, comp: false, qty: false },
+    { id: 'lco', lDe: 'Late Check-out', lEn: 'Late check-out', price: 88, perNight: false, comp: false, qty: false },
+    { id: 'sc', lDe: 'Soft Cleaning', lEn: 'Soft cleaning', price: 65, perNight: false, comp: false, qty: true },
+    { id: 'zr-studio', lDe: 'Zwischenreinigung Studio', lEn: 'Mid-stay cleaning Studio', price: 80, perNight: false, comp: false, qty: true, qtyMax: 10 },
+    { id: 'zr-1br', lDe: 'Zwischenreinigung 1-Bedroom', lEn: 'Mid-stay cleaning 1-Bedroom', price: 80, perNight: false, comp: false, qty: true, qtyMax: 10 },
+    { id: 'zr-2br', lDe: 'Zwischenreinigung 2-Bedroom', lEn: 'Mid-stay cleaning 2-Bedroom', price: 110, perNight: false, comp: false, qty: true, qtyMax: 10 },
+    { id: 'zr-3br', lDe: 'Zwischenreinigung 3-Bedroom', lEn: 'Mid-stay cleaning 3-Bedroom', price: 160, perNight: false, comp: false, qty: true, qtyMax: 10 },
+    { id: 'zr-4br', lDe: 'Zwischenreinigung 4-Bedroom', lEn: 'Mid-stay cleaning 4-Bedroom', price: 195, perNight: false, comp: false, qty: true, qtyMax: 10 }
   ],
   texts: {
     introDe: 'Vielen Dank für Ihr Interesse an einem Aufenthalt in den Andermatt Alpine Apartments. Es freut uns sehr, Ihnen das folgende Angebot unterbreiten zu dürfen.',
@@ -269,6 +343,21 @@ const DEFAULT_CONFIG = {
     parkingEn: 'Parking: CHF 22/night (Andermatt Reuss underground garage)',
     catLinkDe: 'alpine.apartments/apartments',
     catLinkEn: 'alpine.apartments/en/apartments'
+  },
+  groupTexts: {
+    introDefault: 'Thank you very much for your interest in the Andermatt Alpine Apartments. We are pleased that you are considering staying with us in Andermatt. We are happy to make you the offer below:',
+    footer: 'The price includes bed linen and towels, VAT and visitor\'s tax.',
+    pricesInclusions: 'All prices are quoted in Swiss Francs (CHF) and include VAT and visitor\'s tax. Prices are per apartment and are based on the number of nights and units stated in this offer. A one-off end cleaning fee applies per apartment as shown above.',
+    parkingArrival: 'Parking is available at the Andermatt Reuss underground garage. Further information on arrival and parking can be found at the link below.',
+    parkingArrivalLink: 'https://alpine.apartments/en/arrival/',
+    checkInOut: 'Check-in is from 16:00. Check-out is until 10:00. Early check-in and late check-out may be requested and are subject to availability and an additional fee.',
+    bikeSkiStorage: 'A secure storage room for bicycles and ski equipment is available to guests free of charge, subject to availability.',
+    petsSmoking: 'Pets are not permitted. Smoking is not permitted inside the apartments.',
+    pleaseNote: 'This offer is subject to availability at the time of booking confirmation. Rates and terms may be adjusted for confirmed group bookings.',
+    cutOffDate: 'Unless otherwise agreed, the cut-off date for this block is 6 weeks before arrival. Rooms not confirmed by this date may be released back into general inventory.',
+    reductionAfterCutOff: 'After the cut-off date, the number of units held under this offer may be reduced to reflect confirmed bookings only.',
+    cancellationPolicy: 'Cancellations made more than 30 days before arrival are free of charge. Cancellations within 30 days of arrival are subject to a charge of 100% of the total booking value, unless otherwise agreed in writing.',
+    paymentTerms: 'A deposit of 30% is due upon booking confirmation. The remaining balance is due 30 days before arrival.'
   }
 };
 
@@ -310,7 +399,7 @@ function setLang(l) {
 }
 
 function goTab(name) {
-  ['create', 'history', 'settings'].forEach((t, i) => {
+  ['create', 'history', 'group', 'settings'].forEach((t, i) => {
     document.getElementById('pane-' + t).classList.toggle('active', t === name);
     document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
   });
@@ -318,14 +407,24 @@ function goTab(name) {
   if (name === 'settings') { document.getElementById('s-texts').innerHTML = ''; renderSettingsPanel(); }
 }
 
+const EN_SALUTATIONS = [['ef', 'Dear Ms.'], ['em', 'Dear Mr.'], ['en2', 'Dear Sir or Madam']];
+
 function buildSalutationOptions() {
   const el = document.getElementById('sal');
   const opts = lang === 'de'
     ? [['df', 'Sehr geehrte Frau'], ['dm', 'Sehr geehrter Herr'], ['dn', 'Guten Tag']]
-    : [['ef', 'Dear Ms.'], ['em', 'Dear Mr.'], ['en2', 'Dear Sir or Madam']];
+    : EN_SALUTATIONS;
   el.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
   const match = opts.find(([v]) => v.charAt(0) === (lang === 'de' ? 'd' : 'e'));
   if (match) el.value = match[0];
+}
+
+// The Group Offer document is always English (per the reference layout), so its
+// salutation dropdown is independent of the DE/EN toggle used elsewhere.
+function buildGroupSalutationOptions() {
+  const el = document.getElementById('grp-sal');
+  if (!el) return;
+  el.innerHTML = EN_SALUTATIONS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
 }
 
 function buildDiscountDropdown() {
@@ -395,14 +494,37 @@ function setMode(m) {
 
 function renderRoomTabs() {
   const c = document.getElementById('rtabs');
-  let html = rooms.map((r, i) => `<button class="rtab ${i === activeRoomIndex ? 'active' : ''}" onclick="selectRoom(${i})">${SIZE_LABELS[r.size]}</button>`).join('');
+  let html = rooms.map((r, i) => `<button class="rtab ${i === activeRoomIndex ? 'active' : ''}" onclick="selectRoom(${i})">${getRoomTypeCode(r.size, r.cat)}</button>`).join('');
   if (rooms.length < 5) html += `<button class="rtab radd" onclick="addRoom()">+ ${lang === 'de' ? 'Zimmer' : 'Room'}</button>`;
   c.innerHTML = html;
 }
 
 function renderRoomPanels() {
   const c = document.getElementById('rpanels');
-  c.innerHTML = rooms.map((r, i) => `<div class="rpanel ${i === activeRoomIndex ? 'active' : ''}">${rooms.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="removeRoom(${i})"><i class="ti ti-trash"></i>${lang === 'de' ? 'Entfernen' : 'Remove'}</button></div>` : ''}<div class="g2"><div class="fld"><label>${lang === 'de' ? 'Grösse' : 'Size'}</label><select onchange="rooms[${i}].size=this.value;renderRoomTabs();renderRoomPanels()">${Object.entries(SIZE_LABELS).map(([v, l]) => `<option value="${v}" ${r.size === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Kategorie' : 'Category'}</label><select onchange="rooms[${i}].cat=this.value">${CATEGORIES.map(ct => `<option ${r.cat === ct ? 'selected' : ''}>${ct}</option>`).join('')}</select></div></div><div class="togw"><button class="tbtn ${r.priceMode === 'total' ? 'active' : ''}" onclick="setPriceMode(${i},'total')">${lang === 'de' ? 'Gesamtpreis' : 'Total price'}</button><button class="tbtn ${r.priceMode === 'perNight' ? 'active' : ''}" onclick="setPriceMode(${i},'perNight')">${lang === 'de' ? 'Preis/Nacht' : 'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode === 'total' ? 'Gesamtpreis CHF' : 'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="rooms[${i}].rate=this.value">${CONFIG.rates.map(rt => `<option value="${rt.id}" ${r.rate === rt.id ? 'selected' : ''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Benutzerdefinierte Storno' : 'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRoomPanels()"><option value="auto" ${!r.customStorno ? 'selected' : ''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno ? 'selected' : ''}>Benutzerdefiniert</option></select></div></div>${r.customStorno ? `<div class="fld" style="margin-top:8px"><label>${lang === 'de' ? 'Stornotext' : 'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText || ''}</textarea></div>` : ''}</div>`).join('');
+  c.innerHTML = rooms.map((r, i) => `<div class="rpanel ${i === activeRoomIndex ? 'active' : ''}">${rooms.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="removeRoom(${i})"><i class="ti ti-trash"></i>${lang === 'de' ? 'Entfernen' : 'Remove'}</button></div>` : ''}<div class="fld" style="margin-bottom:12px"><label>${lang === 'de' ? 'Zimmertyp-Code' : 'Room Type Code'}</label><select onchange="setRoomTypeCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(r.size, r.cat))}</select></div><div class="togw"><button class="tbtn ${r.priceMode === 'total' ? 'active' : ''}" onclick="setPriceMode(${i},'total')">${lang === 'de' ? 'Gesamtpreis' : 'Total price'}</button><button class="tbtn ${r.priceMode === 'perNight' ? 'active' : ''}" onclick="setPriceMode(${i},'perNight')">${lang === 'de' ? 'Preis/Nacht' : 'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode === 'total' ? 'Gesamtpreis CHF' : 'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="rooms[${i}].rate=this.value">${CONFIG.rates.map(rt => `<option value="${rt.id}" ${r.rate === rt.id ? 'selected' : ''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Benutzerdefinierte Storno' : 'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRoomPanels()"><option value="auto" ${!r.customStorno ? 'selected' : ''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno ? 'selected' : ''}>Benutzerdefiniert</option></select></div></div>${r.customStorno ? `<div class="fld" style="margin-top:8px"><label>${lang === 'de' ? 'Stornotext' : 'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText || ''}</textarea></div>` : ''}</div>`).join('');
+}
+
+function setRoomTypeCode(i, code) {
+  const { size, cat } = parseRoomTypeCode(code);
+  rooms[i].size = size;
+  rooms[i].cat = cat;
+  renderRoomTabs();
+  renderRoomPanels();
+}
+
+function getDefaultRateCodeForStay(nights, season) {
+  if (season === 'summer' && nights >= 5) return 'EXT';
+  if (season === 'winter' && nights >= 7) return 'EXT';
+  return 'BAR';
+}
+
+function applyDefaultRateCodes() {
+  const nights = getNights();
+  if (nights <= 0) return;
+  const season = getSeasonForDate(arrivalDate);
+  const defaultRate = getDefaultRateCodeForStay(nights, season);
+  if (!CONFIG.rates.some(rt => rt.id === defaultRate)) return;
+  rooms.forEach(r => { r.rate = defaultRate; });
 }
 
 function setPriceMode(i, m) { rooms[i].priceMode = m; rooms[i].priceVal = ''; renderRoomPanels(); }
@@ -415,7 +537,8 @@ function renderExtrasChecklist() {
   c.innerHTML = CONFIG.extras.map(ex => {
     const label = lang === 'de' ? ex.lDe : ex.lEn;
     const hint = ex.comp ? (lang === 'de' ? 'Kostenlos' : 'Complimentary') : ex.perNight ? `CHF ${ex.price}${lang === 'de' ? '/Nacht' : '/night'}` : `CHF ${ex.price}`;
-    const qty = ex.qty ? `<select id="xq-${ex.id}" style="width:55px">${[1, 2, 3, 4, 5].map(n => `<option>${n}</option>`).join('')}</select>` : '';
+    const qtyMax = ex.qtyMax || 5;
+    const qty = ex.qty ? `<select id="xq-${ex.id}" style="width:55px">${Array.from({ length: qtyMax }, (_, n) => n + 1).map(n => `<option>${n}</option>`).join('')}</select>` : '';
     const price = !ex.comp ? `<input type="number" id="xp-${ex.id}" value="${ex.price}" style="width:72px" min="0">` : '';
     return `<div class="crow"><input type="checkbox" id="x-${ex.id}"><label for="x-${ex.id}">${label} <span class="ph">(${hint})</span></label>${qty}${price}</div>`;
   }).join('');
@@ -629,24 +752,37 @@ function resetForm() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+const MONTH_NAMES_DE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const MONTH_NAMES_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_NAMES_DE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const DAY_NAMES_EN = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const WEEKDAY_FULL_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function formatEnglishDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${WEEKDAY_FULL_EN[dt.getDay()]}, ${dt.getDate()} ${MONTH_NAMES_EN[dt.getMonth()]} ${dt.getFullYear()}`;
+}
+
 function toggleCal(e) {
   e.stopPropagation();
   const p = document.getElementById('cal-pop');
+  // The calendar popup is shared between the Create and Group Offer tabs (same
+  // arrival/departure state); relocate it into whichever tab's .cal-wrap opened it,
+  // since its absolute position is anchored to that ancestor.
+  const wrap = e.currentTarget.closest('.cal-wrap');
+  if (wrap && p.parentElement !== wrap) wrap.appendChild(p);
   p.style.display = p.style.display === 'block' ? 'none' : 'block';
   if (p.style.display === 'block') renderCalendar();
 }
 
 function renderCalendar() {
-  const monthNamesDe = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-  const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  document.getElementById('cal-mlbl').textContent = (lang === 'de' ? monthNamesDe : monthNamesEn)[calMonth] + ' ' + calYear;
+  document.getElementById('cal-mlbl').textContent = (lang === 'de' ? MONTH_NAMES_DE : MONTH_NAMES_EN)[calMonth] + ' ' + calYear;
 
-  const dayNamesDe = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  const dayNamesEn = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let html = (lang === 'de' ? dayNamesDe : dayNamesEn).map(d => `<div class="cdh">${d}</div>`).join('');
+  let html = (lang === 'de' ? DAY_NAMES_DE : DAY_NAMES_EN).map(d => `<div class="cdh">${d}</div>`).join('');
 
   const first = new Date(calYear, calMonth, 1);
   let dow = first.getDay();
@@ -707,38 +843,46 @@ function pickDay(e, y, m, d) {
     departureDate = dt;
     calStep = 1;
     updateDateDisplay();
+    applyDefaultRateCodes();
+    renderRoomPanels();
   }
   renderCalendar();
 }
 
 function updateDateDisplay() {
   const nights = getNights();
-  const lbl = document.getElementById('cal-lbl');
-  const chip = document.getElementById('nchip');
-  const trigger = document.getElementById('cal-trigger');
+  // The same arrival/departure state feeds both the Create tab and the Group Offer
+  // tab's date display, so both trigger widgets are refreshed here (whichever exist).
+  ['', 'grp-'].forEach(prefix => {
+    const lbl = document.getElementById(prefix + 'cal-lbl');
+    const chip = document.getElementById(prefix + 'nchip');
+    const trigger = document.getElementById(prefix + 'cal-trigger');
+    if (!lbl || !chip || !trigger) return;
 
-  if (arrivalDate && departureDate) {
-    lbl.textContent = `${formatDate(arrivalDate)}  →  ${formatDate(departureDate)}`;
-    lbl.style.color = 'var(--dk)';
-    chip.innerHTML = `<span class="nchip">${nights} ${lang === 'de' ? 'Nächte' : 'nights'}</span>`;
-    trigger.classList.add('has');
-    document.getElementById('cal-pop').style.display = 'none';
-  } else if (arrivalDate) {
-    lbl.textContent = formatDate(arrivalDate) + ' → ?';
-    lbl.style.color = 'var(--dk)';
-    chip.innerHTML = '';
-    trigger.classList.remove('has');
-  } else {
-    lbl.textContent = lang === 'de' ? 'Anreise und Abreise wählen' : 'Select arrival and departure';
-    lbl.style.color = 'var(--mu)';
-    chip.innerHTML = '';
-    trigger.classList.remove('has');
-  }
+    if (arrivalDate && departureDate) {
+      lbl.textContent = `${formatDate(arrivalDate)}  →  ${formatDate(departureDate)}`;
+      lbl.style.color = 'var(--dk)';
+      chip.innerHTML = `<span class="nchip">${nights} ${lang === 'de' ? 'Nächte' : 'nights'}</span>`;
+      trigger.classList.add('has');
+    } else if (arrivalDate) {
+      lbl.textContent = formatDate(arrivalDate) + ' → ?';
+      lbl.style.color = 'var(--dk)';
+      chip.innerHTML = '';
+      trigger.classList.remove('has');
+    } else {
+      lbl.textContent = lang === 'de' ? 'Anreise und Abreise wählen' : 'Select arrival and departure';
+      lbl.style.color = 'var(--mu)';
+      chip.innerHTML = '';
+      trigger.classList.remove('has');
+    }
+  });
+
+  if (arrivalDate && departureDate) document.getElementById('cal-pop').style.display = 'none';
 }
 
 document.addEventListener('click', e => {
   const p = document.getElementById('cal-pop');
-  const w = document.querySelector('.cal-wrap');
+  const w = p && p.parentElement;
   if (p && p.style.display === 'block' && w && !w.contains(e.target)) p.style.display = 'none';
 });
 
@@ -786,6 +930,7 @@ function clrHist() {
 
 function renderSettingsPanel() {
   renderDiscountSettingsPanel();
+  renderGroupTextsSettings();
 
   const summerInput = document.getElementById('season-summer');
   const winterInput = document.getElementById('season-winter');
@@ -814,6 +959,14 @@ function renderSettingsPanel() {
   document.getElementById('s-greet').innerHTML = CONFIG.greets.map((g, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--br)"><input type="text" id="gde-${i}" value="${g.de}" placeholder="DE"><input type="text" id="gen-${i}" value="${g.en}" placeholder="EN">${CONFIG.greets.length > 1 ? `<button class="bsm bdng" onclick="removeGreet(${i})"><i class="ti ti-trash"></i></button>` : '<div></div>'}</div>`).join('');
 
   document.getElementById('s-stdinfo').innerHTML = [['wlan', 'WLAN'], ['parking', 'Parkplatz'], ['catLink', 'Kategorie-Link']].map(([k, lbl]) => `<div style="margin-bottom:1rem"><div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${lbl}</div><div class="g2"><div class="fld"><label>DE</label><input type="text" id="si-${k}-de" value="${CONFIG.stdinfo[k + 'De'] || ''}"></div><div class="fld"><label>EN</label><input type="text" id="si-${k}-en" value="${CONFIG.stdinfo[k + 'En'] || ''}"></div></div></div>`).join('');
+}
+
+function renderGroupTextsSettings() {
+  if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
+  Object.keys(CONFIG.groupTexts).forEach(key => {
+    const el = document.getElementById('gt-' + key);
+    if (el) el.value = CONFIG.groupTexts[key] || '';
+  });
 }
 
 function renderDiscountSettingsPanel() {
@@ -956,6 +1109,12 @@ function saveSettings() {
     if (en) CONFIG.stdinfo[k + 'En'] = en.value;
   });
 
+  if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
+  Object.keys(CONFIG.groupTexts).forEach(key => {
+    const el = document.getElementById('gt-' + key);
+    if (el) CONFIG.groupTexts[key] = el.value;
+  });
+
   localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
   buildDiscountDropdown();
 
@@ -965,6 +1124,205 @@ function saveSettings() {
 
   renderRoomPanels();
   renderExtrasChecklist();
+}
+
+function createGroupBlock() {
+  return { size: 'studio', cat: 'Standard', units: 1, offerText: '', priceMode: 'total', priceVal: '' };
+}
+
+let groupOffer = { blocks: [createGroupBlock()] };
+let groupHistory = JSON.parse(localStorage.getItem('aaa_grp_h') || '[]');
+
+function renderGroupBlocks() {
+  const c = document.getElementById('grp-blocks');
+  if (!c) return;
+  c.innerHTML = groupOffer.blocks.map((b, i) => `<div class="cicard">
+    <div class="cihdr"><span class="citit">Offer ${i + 1}</span>${groupOffer.blocks.length > 1 ? `<button class="bsm bdng" onclick="removeGroupBlock(${i})"><i class="ti ti-trash"></i></button>` : ''}</div>
+    <div class="fld" style="margin-bottom:12px"><label>Category</label><select onchange="setGroupBlockCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(b.size, b.cat))}</select></div>
+    <div class="g2">
+      <div class="fld"><label>Units</label><input type="number" min="1" value="${b.units}" oninput="groupOffer.blocks[${i}].units=this.value"></div>
+      <div class="fld"><label>Offer</label><input type="text" value="${b.offerText}" placeholder="e.g. Special rate" oninput="groupOffer.blocks[${i}].offerText=this.value"></div>
+    </div>
+    <div class="togw">
+      <button class="tbtn ${b.priceMode === 'total' ? 'active' : ''}" onclick="setGroupPriceMode(${i},'total')">Total price</button>
+      <button class="tbtn ${b.priceMode === 'perNight' ? 'active' : ''}" onclick="setGroupPriceMode(${i},'perNight')">Price per night</button>
+    </div>
+    <div class="fld"><input type="number" min="0" value="${b.priceVal}" placeholder="${b.priceMode === 'total' ? 'Total CHF' : 'Price/night CHF'}" oninput="groupOffer.blocks[${i}].priceVal=this.value"></div>
+  </div>`).join('');
+}
+
+function setGroupBlockCode(i, code) {
+  const { size, cat } = parseRoomTypeCode(code);
+  groupOffer.blocks[i].size = size;
+  groupOffer.blocks[i].cat = cat;
+}
+
+function setGroupPriceMode(i, m) {
+  groupOffer.blocks[i].priceMode = m;
+  groupOffer.blocks[i].priceVal = '';
+  renderGroupBlocks();
+}
+
+function addGroupBlock() {
+  if (groupOffer.blocks.length < 10) {
+    groupOffer.blocks.push(createGroupBlock());
+    renderGroupBlocks();
+  }
+}
+
+function removeGroupBlock(i) {
+  if (groupOffer.blocks.length <= 1) return;
+  groupOffer.blocks.splice(i, 1);
+  renderGroupBlocks();
+}
+
+function computeGroupBlockPricing(b, nights) {
+  const cleaning = CONFIG.cleaning[b.size] || 105;
+  const units = parseInt(b.units) || 1;
+  const priceVal = parseFloat(b.priceVal) || 0;
+  const perNight = b.priceMode === 'total'
+    ? (nights > 0 && units > 0 ? (priceVal - cleaning) / nights / units : 0)
+    : priceVal;
+  const perApartment = perNight * nights + cleaning;
+  return { fullCat: SIZE_LABELS[b.size] + ' ' + b.cat, units, offerText: b.offerText, cleaning, perNight, perApartment };
+}
+
+function genGroupOffer() {
+  const err = document.getElementById('grpErrMsg');
+  err.style.display = 'none';
+
+  const salEl = document.getElementById('grp-sal');
+  const contactName = document.getElementById('grp-name').value.trim();
+  const nights = getNights();
+
+  if (!contactName) {
+    err.textContent = 'Please enter a contact name.';
+    err.style.display = 'block';
+    return;
+  }
+  if (nights <= 0) {
+    err.textContent = 'Please select the stay dates.';
+    err.style.display = 'block';
+    return;
+  }
+  for (let i = 0; i < groupOffer.blocks.length; i++) {
+    if (!(parseFloat(groupOffer.blocks[i].priceVal) > 0)) {
+      err.textContent = `Offer ${i + 1}: price is missing.`;
+      err.style.display = 'block';
+      return;
+    }
+  }
+
+  const salLbl = salEl.options[salEl.selectedIndex].text;
+  const isNeutralSalutation = salEl.value.endsWith('n') || salEl.value.endsWith('2');
+  const salLine = (isNeutralSalutation ? salLbl : salLbl + ' ' + contactName) + ',';
+  const introText = document.getElementById('grp-intro').value.trim() || CONFIG.groupTexts.introDefault;
+
+  const today = new Date();
+  const dateLine = `Andermatt, ${formatEnglishDate(today)}`;
+
+  const blockData = groupOffer.blocks.map(b => computeGroupBlockPricing(b, nights));
+
+  const blocksHtml = blockData.map((b, i) => `<div class="offer-block">
+    <div class="offer-block-title">Offer ${i + 1}</div>
+    <table class="offer-table">
+      <tr><td>Category</td><td>${b.fullCat}</td></tr>
+      <tr><td>Units</td><td>${b.units}</td></tr>
+      <tr><td>Offer</td><td>${b.offerText || '–'}</td></tr>
+      <tr><td>Price per Night</td><td>${formatCurrency(b.perNight)}</td></tr>
+      <tr><td>One-off cleaning fee</td><td>${formatCurrency(b.cleaning)}</td></tr>
+      <tr class="offer-row-total"><td>Price per apartment</td><td><strong>${formatCurrency(b.perApartment)}</strong></td></tr>
+    </table>
+  </div>`).join('');
+
+  const gt = CONFIG.groupTexts;
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Group_Offer_${contactName.replace(/\s+/g, '_')}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 14mm 18mm}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:0.4pt solid #ddd}
+.logo{font-size:13pt;font-weight:700}.sub{font-size:7.5pt;color:#8B6914;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:1.5mm}
+.meta{text-align:right;font-size:8pt;color:#666}
+.group-title{font-size:16pt;font-weight:700;margin-bottom:5mm}
+.salutation{font-size:11pt;margin-bottom:4mm}
+.intro{font-size:9pt;color:#444;line-height:1.7;margin-bottom:6mm}
+.stay-details{border-collapse:collapse;margin-bottom:6mm}
+.stay-details td{padding:1mm 4mm 1mm 0;font-size:9pt}
+.stay-details td:first-child{color:#666}
+.offer-block{margin-bottom:5mm}
+.offer-block-title{font-size:11pt;font-weight:700;padding-bottom:1.5mm;border-bottom:1pt solid #8B6914;margin-bottom:2mm}
+.offer-table{width:100%;border-collapse:collapse;font-size:9pt}
+.offer-table td{padding:1.8mm 2mm;border-bottom:0.3pt solid #eee}
+.offer-table td:first-child{color:#666;width:45%}
+.offer-row-total td{border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.5mm;font-size:10pt}
+.footer-note{font-size:8pt;color:#777;margin:4mm 0;font-style:italic}
+.page2{page-break-before:always;padding-top:4mm}
+.page2-title{font-size:13pt;font-weight:700;margin-bottom:4mm}
+.section-title{font-size:9.5pt;font-weight:700;color:#8B6914;margin:4mm 0 1.5mm}
+.subsection-title{font-size:9pt;font-weight:700;margin:3mm 0 1mm}
+.body-text{font-size:9pt;color:#444;line-height:1.6;margin-bottom:1mm}
+.body-text a{color:#1A56A0}
+.company-footer{position:fixed;bottom:6mm;left:18mm;right:18mm;font-size:7.5pt;color:#666;border-top:0.4pt solid #ddd;padding-top:2mm}
+@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 24mm 18mm;size:A4}}
+</style></head><body>
+<div class="header">
+  <div><div class="logo">Andermatt Alpine Apartments</div><div class="sub">Reservations · Offerte Tool</div></div>
+  <div class="meta">${dateLine}</div>
+</div>
+<div class="group-title">Group Offer</div>
+<div class="salutation">${salLine}</div>
+<div class="intro">${introText}</div>
+<table class="stay-details">
+  <tr><td>Arrival date:</td><td>${formatEnglishDate(arrivalDate)}</td></tr>
+  <tr><td>Departure date:</td><td>${formatEnglishDate(departureDate)}</td></tr>
+  <tr><td>Duration:</td><td>${nights} nights</td></tr>
+</table>
+${blocksHtml}
+<div class="footer-note">${gt.footer}</div>
+<div class="page2">
+  <div class="page2-title">Prices and Inclusions</div>
+  <p class="body-text">${gt.pricesInclusions}</p>
+  <div class="section-title">Parking and Arrival</div>
+  <p class="body-text">${gt.parkingArrival} <a href="${gt.parkingArrivalLink}">${gt.parkingArrivalLink}</a></p>
+  <div class="section-title">Check-in and Check-out</div>
+  <p class="body-text">${gt.checkInOut}</p>
+  <div class="section-title">Bicycle and Ski Storage</div>
+  <p class="body-text">${gt.bikeSkiStorage}</p>
+  <div class="section-title">Pets and Smoking</div>
+  <p class="body-text">${gt.petsSmoking}</p>
+  <div class="section-title">Please Note</div>
+  <p class="body-text">${gt.pleaseNote}</p>
+  <div class="section-title">Cancellation and Cut-Off Terms</div>
+  <div class="subsection-title">Cut-Off Date</div>
+  <p class="body-text">${gt.cutOffDate}</p>
+  <div class="subsection-title">Reduction of the Block After Cut-Off</div>
+  <p class="body-text">${gt.reductionAfterCutOff}</p>
+  <div class="subsection-title">Cancellation Policy</div>
+  <p class="body-text">${gt.cancellationPolicy}</p>
+  <div class="subsection-title">Payment Terms</div>
+  <p class="body-text">${gt.paymentTerms}</p>
+</div>
+<div class="company-footer">Andermatt Alpine Apartments | Gütschgasse 6 | CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
+</body></html>`;
+
+  const printWin = window.open('', '_blank', 'width=900,height=700');
+  if (!printWin) { alert('Please disable your pop-up blocker.'); return; }
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+  triggerPrintWhenReady(printWin);
+
+  const totalApartments = groupOffer.blocks.reduce((s, b) => s + (parseInt(b.units) || 0), 0);
+  groupHistory.unshift({
+    date: today.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    contactName,
+    blockCount: groupOffer.blocks.length,
+    totalApartments
+  });
+  if (groupHistory.length > 20) groupHistory.pop();
+  localStorage.setItem('aaa_grp_h', JSON.stringify(groupHistory));
 }
 
 function copyOut() {
@@ -1277,6 +1635,9 @@ renderRoomTabs();
 renderRoomPanels();
 renderExtrasChecklist();
 buildDiscountDropdown();
+buildGroupSalutationOptions();
+renderGroupBlocks();
+document.getElementById('grp-intro').value = (CONFIG.groupTexts || DEFAULT_CONFIG.groupTexts).introDefault;
 </script>
 </body>
 </html>
