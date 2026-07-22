@@ -370,6 +370,9 @@ const DEFAULT_CONFIG = {
 };
 
 let CONFIG = JSON.parse(localStorage.getItem('aaa_cfg8') || 'null') || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+// Configs saved before a feature (e.g. groupTexts) was introduced won't have that key -
+// backfill it here so features work immediately, not just after visiting Settings.
+if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
 
 function createRoom() {
   return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', customStorno: false, customStornoText: '' };
@@ -1179,7 +1182,7 @@ function saveSettings() {
 // apartment categories together (matching the reference document, where a single
 // "Offer 1" lists e.g. both Studio Superior and Studio Deluxe as separate lines).
 function createGroupCategoryLine() {
-  return { size: 'studio', cat: 'Standard', units: 1, offerText: '', priceMode: 'total', priceVal: '' };
+  return { size: 'studio', cat: 'Standard', units: 1, offerText: '', priceVal: '' };
 }
 
 function createGroupOfferBlock() {
@@ -1201,15 +1204,11 @@ function renderGroupBlocks() {
     ${block.lines.map((line, li) => `<div style="border-top:1px solid var(--br);padding-top:.75rem;margin-top:.75rem">
       ${block.lines.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="bsm bdng" onclick="removeGroupLine(${bi},${li})"><i class="ti ti-trash"></i>${t('Kategorie entfernen', 'Remove category')}</button></div>` : ''}
       <div class="fld" style="margin-bottom:12px"><label>${t('Kategorie', 'Category')}</label><select onchange="setGroupLineCode(${bi},${li},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(line.size, line.cat))}</select></div>
-      <div class="g2">
+      <div class="g3">
         <div class="fld"><label>${t('Einheiten', 'Units')}</label><input type="number" min="1" value="${line.units}" oninput="groupOffer.blocks[${bi}].lines[${li}].units=this.value"></div>
         <div class="fld"><label>${t('Angebot', 'Offer')}</label><input type="text" value="${line.offerText}" placeholder="${t('z.B. Sonderpreis', 'e.g. Special rate')}" oninput="groupOffer.blocks[${bi}].lines[${li}].offerText=this.value"></div>
+        <div class="fld"><label>${t('Preis/Nacht (CHF)', 'Price/night (CHF)')}</label><input type="number" min="0" value="${line.priceVal}" oninput="groupOffer.blocks[${bi}].lines[${li}].priceVal=this.value"></div>
       </div>
-      <div class="togw">
-        <button class="tbtn ${line.priceMode === 'total' ? 'active' : ''}" onclick="setGroupLinePriceMode(${bi},${li},'total')">${t('Gesamtpreis', 'Total price')}</button>
-        <button class="tbtn ${line.priceMode === 'perNight' ? 'active' : ''}" onclick="setGroupLinePriceMode(${bi},${li},'perNight')">${t('Preis/Nacht', 'Price per night')}</button>
-      </div>
-      <div class="fld"><input type="number" min="0" value="${line.priceVal}" placeholder="${line.priceMode === 'total' ? t('Gesamtpreis CHF', 'Total CHF') : t('Preis/Nacht CHF', 'Price/night CHF')}" oninput="groupOffer.blocks[${bi}].lines[${li}].priceVal=this.value"></div>
     </div>`).join('')}
     <button class="bsm badd" style="margin-top:.75rem" onclick="addGroupLine(${bi})"><i class="ti ti-plus"></i>${t('Kategorie hinzufügen', 'Add Category')}</button>
   </div>`).join('');
@@ -1219,12 +1218,6 @@ function setGroupLineCode(bi, li, code) {
   const { size, cat } = parseRoomTypeCode(code);
   groupOffer.blocks[bi].lines[li].size = size;
   groupOffer.blocks[bi].lines[li].cat = cat;
-}
-
-function setGroupLinePriceMode(bi, li, m) {
-  groupOffer.blocks[bi].lines[li].priceMode = m;
-  groupOffer.blocks[bi].lines[li].priceVal = '';
-  renderGroupBlocks();
 }
 
 function addGroupBlock() {
@@ -1254,12 +1247,10 @@ function removeGroupLine(bi, li) {
 function computeGroupLinePricing(line, nights) {
   const cleaning = CONFIG.cleaning[line.size] || 105;
   const units = parseInt(line.units) || 1;
-  const priceVal = parseFloat(line.priceVal) || 0;
-  const perNight = line.priceMode === 'total'
-    ? (nights > 0 && units > 0 ? (priceVal - cleaning) / nights / units : 0)
-    : priceVal;
+  const perNight = parseFloat(line.priceVal) || 0;
   const perApartment = perNight * nights + cleaning;
-  return { fullCat: SIZE_LABELS[line.size] + ' ' + line.cat, units, offerText: line.offerText, cleaning, perNight, perApartment };
+  const total = perApartment * units;
+  return { fullCat: SIZE_LABELS[line.size] + ' ' + line.cat, units, offerText: line.offerText, cleaning, perNight, perApartment, total };
 }
 
 // Renders a multi-line settings/reference text (paragraphs separated by \n, blank
@@ -1315,7 +1306,8 @@ function genGroupOffer() {
       <tr><td>${t('Angebot', 'Offer')}</td><td>${b.offerText || '–'}</td></tr>
       <tr><td>${t('Preis pro Nacht', 'Price per Night')}</td><td>${formatCurrency(b.perNight)}</td></tr>
       <tr><td>${t('Einmalige Endreinigung', 'One-off cleaning fee')}</td><td>${formatCurrency(b.cleaning)}</td></tr>
-      <tr class="offer-row-total"><td>${t('Preis pro Apartment', 'Price per apartment')}</td><td><strong>${formatCurrency(b.perApartment)}</strong></td></tr>
+      <tr><td>${t('Preis pro Apartment', 'Price per apartment')}</td><td>${formatCurrency(b.perApartment)}</td></tr>
+      <tr class="offer-row-total"><td>${t('Gesamtpreis', 'Total price')}</td><td><strong>${formatCurrency(b.total)}</strong></td></tr>
     </table>`;
     }).join('<div style="height:3mm"></div>');
     return `<div class="offer-block">
