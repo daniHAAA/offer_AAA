@@ -233,6 +233,20 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div class="sec"><div class="stit"><i class="ti ti-message-circle"></i>Grussformeln</div><div id="s-greet"></div><button class="bsm badd" onclick="addGreet()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Grussformel hinzufügen</button></div>
   <div class="sec"><div class="stit"><i class="ti ti-info-circle"></i>Standardhinweise</div><div id="s-stdinfo"></div></div>
   <div class="sec">
+    <div class="stit"><i class="ti ti-calendar-time"></i>Gruppenofferte: Cut-off, Storno & Zahlungsbedingungen</div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Werte steuern die Zahlen in der Gruppenofferte-PDF (Storno- und Cut-off-Bedingungen).</p>
+    <div class="fld" style="margin-bottom:1rem;max-width:200px"><label>Cut-off-Tage vor dem Anlass</label><input type="number" id="gterm-cutoffdays" min="0"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Reduktionsstufen nach Cut-off</div>
+    <div id="s-reductiontiers"></div>
+    <button class="bsm badd" onclick="addReductionTier()" style="margin-top:.5rem;margin-bottom:1rem"><i class="ti ti-plus"></i>Stufe hinzufügen</button>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Stornostufen</div>
+    <div id="s-cancellationtiers"></div>
+    <button class="bsm badd" onclick="addCancellationTier()" style="margin-top:.5rem;margin-bottom:1rem"><i class="ti ti-plus"></i>Stufe hinzufügen</button>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Zahlungsplan</div>
+    <div id="s-paymentplan"></div>
+    <button class="bsm badd" onclick="addPaymentTier()" style="margin-top:.5rem"><i class="ti ti-plus"></i>Rate hinzufügen</button>
+  </div>
+  <div class="sec">
     <div class="stit"><i class="ti ti-users"></i>Gruppenofferte Texte (DE / EN)</div>
     <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Texte werden in der Gruppenofferte (PDF) verwendet, je nach gewählter Sprache (DE/EN oben rechts).</p>
     <div id="s-grouptexts"></div>
@@ -352,27 +366,49 @@ const DEFAULT_CONFIG = {
     petsSmokingDe: 'Haustiere und Rauchen sind in den Apartments nicht gestattet.',
     pleaseNoteEn: 'The appearance of the Andermatt Reuss holiday village is continually evolving. Ongoing construction in the vicinity of your apartment may result in some daytime noise.',
     pleaseNoteDe: 'Das Erscheinungsbild des Feriendorfs Andermatt Reuss entwickelt sich laufend weiter. Baustellen in der Nähe Ihres Apartments können tagsüber zu gewissen Lärmimmissionen führen.',
-    cutOffDateEn: 'The final number of apartments must be confirmed 60 days prior to the event. On the cut-off date, AAA will review the reservation acceptance for the event, release any unreserved rooms for general sale, and determine whether additional reservations can still be accepted at group rates based on availability.',
-    cutOffDateDe: 'Die definitive Anzahl Apartments muss 60 Tage vor dem Anlass bestätigt werden. Am Cut-off-Datum prüft AAA den Reservationsstand für den Anlass, gibt nicht reservierte Einheiten für den freien Verkauf frei und entscheidet je nach Verfügbarkeit, ob weitere Reservationen zum Gruppentarif angenommen werden können.',
-    reductionAfterCutOffEn: 'Up to 30 days before arrival: free reduction of up to 10% of the booked block\n29 to 14 days before arrival: free reduction of up to 5% of the booked block\n13 to 0 days before arrival: no free reduction possible',
-    reductionAfterCutOffDe: 'Bis 30 Tage vor Anreise: kostenlose Reduktion von bis zu 10% des gebuchten Kontingents\n29 bis 14 Tage vor Anreise: kostenlose Reduktion von bis zu 5% des gebuchten Kontingents\n13 bis 0 Tage vor Anreise: keine kostenlose Reduktion möglich',
-    cancellationPolicyEn: 'In the event of a full group cancellation:\n0 to 13 working days before arrival: penalty of 100% of room-night obligations plus applicable taxes\n14 to 55 days before arrival: penalty of 80%\n60 to 90 days before arrival: penalty of 60%\n\nThis contract may be terminated without liability in case of circumstances beyond the control of either party, such as force majeure, war, terrorist acts, government regulations, disasters, strikes, civil unrest, or transportation restrictions, if such circumstances make it illegal or impossible for the hotel to provide facilities or for the group to use them. Cancellation under this clause requires written notification to the other party as soon as reasonably possible, and no later than ten (10) days after becoming aware of the circumstances.',
-    cancellationPolicyDe: 'Im Falle einer vollständigen Stornierung der Gruppe gilt:\n0 bis 13 Arbeitstage vor Anreise: Gebühr von 100% der Zimmernacht-Verpflichtungen zzgl. anfallender Steuern\n14 bis 55 Tage vor Anreise: Gebühr von 80%\n60 bis 90 Tage vor Anreise: Gebühr von 60%\n\nDieser Vertrag kann ohne Haftung beendet werden, falls Umstände ausserhalb der Kontrolle einer der beiden Parteien – wie höhere Gewalt, Krieg, terroristische Handlungen, behördliche Anordnungen, Katastrophen, Streiks, zivile Unruhen oder Transportbeschränkungen – es dem Hotel unmöglich oder rechtswidrig machen, die Räumlichkeiten zur Verfügung zu stellen, oder der Gruppe, diese zu nutzen. Eine Stornierung nach dieser Klausel erfordert eine schriftliche Mitteilung an die andere Partei, sobald dies vernünftigerweise möglich ist, spätestens jedoch zehn (10) Tage nach Kenntnisnahme der Umstände.',
-    paymentTermsEn: 'The payment schedule for your event is as follows:\n50% upon signing this contract\n50% after checking out no longer than 1 Month\n\nThis schedule is based on the details outlined in this contract and may be modified according to the terms.',
-    paymentTermsDe: 'Der Zahlungsplan für Ihren Anlass ist wie folgt:\n50% bei Vertragsunterzeichnung\n50% spätestens 1 Monat nach Check-out\n\nDieser Zahlungsplan basiert auf den in diesem Vertrag festgehaltenen Angaben und kann gemäss den vereinbarten Bedingungen angepasst werden.',
+    cutOffDateEn: 'The final number of apartments must be confirmed {days} days prior to the event. On the cut-off date, AAA will review the reservation acceptance for the event, release any unreserved rooms for general sale, and determine whether additional reservations can still be accepted at group rates based on availability.',
+    cutOffDateDe: 'Die definitive Anzahl Apartments muss {days} Tage vor dem Anlass bestätigt werden. Am Cut-off-Datum prüft AAA den Reservationsstand für den Anlass, gibt nicht reservierte Einheiten für den freien Verkauf frei und entscheidet je nach Verfügbarkeit, ob weitere Reservationen zum Gruppentarif angenommen werden können.',
+    cancellationIntroEn: 'In the event of a full group cancellation:',
+    cancellationIntroDe: 'Im Falle einer vollständigen Stornierung der Gruppe gilt:',
+    cancellationForceMajeureEn: 'This contract may be terminated without liability in case of circumstances beyond the control of either party, such as force majeure, war, terrorist acts, government regulations, disasters, strikes, civil unrest, or transportation restrictions, if such circumstances make it illegal or impossible for the hotel to provide facilities or for the group to use them. Cancellation under this clause requires written notification to the other party as soon as reasonably possible, and no later than ten (10) days after becoming aware of the circumstances.',
+    cancellationForceMajeureDe: 'Dieser Vertrag kann ohne Haftung beendet werden, falls Umstände ausserhalb der Kontrolle einer der beiden Parteien – wie höhere Gewalt, Krieg, terroristische Handlungen, behördliche Anordnungen, Katastrophen, Streiks, zivile Unruhen oder Transportbeschränkungen – es dem Hotel unmöglich oder rechtswidrig machen, die Räumlichkeiten zur Verfügung zu stellen, oder der Gruppe, diese zu nutzen. Eine Stornierung nach dieser Klausel erfordert eine schriftliche Mitteilung an die andere Partei, sobald dies vernünftigerweise möglich ist, spätestens jedoch zehn (10) Tage nach Kenntnisnahme der Umstände.',
+    paymentIntroEn: 'The payment schedule for your event is as follows:',
+    paymentIntroDe: 'Der Zahlungsplan für Ihren Anlass ist wie folgt:',
+    paymentOutroEn: 'This schedule is based on the details outlined in this contract and may be modified according to the terms.',
+    paymentOutroDe: 'Dieser Zahlungsplan basiert auf den in diesem Vertrag festgehaltenen Angaben und kann gemäss den vereinbarten Bedingungen angepasst werden.',
     closingIntroEn: 'We are looking forward to welcoming you soon in Andermatt and wish you a pleasant journey in advance.',
     closingIntroDe: 'Wir freuen uns darauf, Sie bald in Andermatt willkommen zu heissen, und wünschen Ihnen schon jetzt eine gute Reise.',
     closingGreetingEn: 'Kind regards from the Uri Alps',
     closingGreetingDe: 'Herzliche Grüsse aus den Urner Alpen',
     closingTeamEn: 'Your Andermatt Alpine Apartments team',
     closingTeamDe: 'Ihr Andermatt Alpine Apartments Team'
+  },
+  groupTerms: {
+    cutOffDays: 60,
+    reductionTiers: [
+      { labelDe: 'Bis 30 Tage vor Anreise', labelEn: 'Up to 30 days before arrival', pct: 10 },
+      { labelDe: '29 bis 14 Tage vor Anreise', labelEn: '29 to 14 days before arrival', pct: 5 },
+      { labelDe: '13 bis 0 Tage vor Anreise', labelEn: '13 to 0 days before arrival', pct: 0 }
+    ],
+    cancellationTiers: [
+      { labelDe: '0 bis 13 Arbeitstage vor Anreise', labelEn: '0 to 13 working days before arrival', pct: 100, noteDe: 'der Zimmernacht-Verpflichtungen zzgl. anfallender Steuern', noteEn: 'of room-night obligations plus applicable taxes' },
+      { labelDe: '14 bis 55 Tage vor Anreise', labelEn: '14 to 55 days before arrival', pct: 80, noteDe: '', noteEn: '' },
+      { labelDe: '60 bis 90 Tage vor Anreise', labelEn: '60 to 90 days before arrival', pct: 60, noteDe: '', noteEn: '' }
+    ],
+    paymentPlan: [
+      { pct: 50, timingDe: 'bei Vertragsunterzeichnung', timingEn: 'at contract signing' },
+      { pct: 50, timingDe: 'spätestens 1 Monat nach Check-out', timingEn: 'no later than 1 month after check-out' }
+    ]
   }
 };
 
 let CONFIG = JSON.parse(localStorage.getItem('aaa_cfg8') || 'null') || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-// Configs saved before a feature (e.g. groupTexts) was introduced won't have that key -
-// backfill it here so features work immediately, not just after visiting Settings.
+// Configs saved before a feature (e.g. groupTexts/groupTerms, or individual keys within
+// them) was introduced won't have those keys - backfill them here so features work
+// immediately, not just after visiting Settings.
 if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
+else Object.keys(DEFAULT_CONFIG.groupTexts).forEach(k => { if (!(k in CONFIG.groupTexts)) CONFIG.groupTexts[k] = DEFAULT_CONFIG.groupTexts[k]; });
+if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
 
 function createRoom() {
   return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', customStorno: false, customStornoText: '' };
@@ -954,6 +990,7 @@ function clrHist() {
 function renderSettingsPanel() {
   renderDiscountSettingsPanel();
   renderGroupTextsSettings();
+  renderGroupTermsSettings();
 
   const summerInput = document.getElementById('season-summer');
   const winterInput = document.getElementById('season-winter');
@@ -993,10 +1030,11 @@ const GROUP_TEXT_FIELDS = [
   ['bikeSkiStorage', 'Bicycle and Ski Storage'],
   ['petsSmoking', 'Pets and Smoking'],
   ['pleaseNote', 'Please Note'],
-  ['cutOffDate', 'Cut-Off Date'],
-  ['reductionAfterCutOff', 'Reduction of the Block After Cut-Off'],
-  ['cancellationPolicy', 'Cancellation Policy'],
-  ['paymentTerms', 'Payment Terms'],
+  ['cutOffDate', 'Cut-Off Date (Platzhalter {days} = Cut-off-Tage, siehe unten)'],
+  ['cancellationIntro', 'Stornobedingungen – Einleitungssatz (vor den Stufen)'],
+  ['cancellationForceMajeure', 'Stornobedingungen – Force-Majeure-Klausel (nach den Stufen)'],
+  ['paymentIntro', 'Zahlungsbedingungen – Einleitungssatz (vor dem Zahlungsplan)'],
+  ['paymentOutro', 'Zahlungsbedingungen – Schlusssatz (nach dem Zahlungsplan)'],
   ['closingIntro', 'Schlusstext (vor der Grussformel)'],
   ['closingGreeting', 'Grussformel'],
   ['closingTeam', 'Team-Signatur']
@@ -1013,6 +1051,72 @@ function renderGroupTextsSettings() {
     <div class="fld"><label>EN</label><textarea id="gt-${key}-en" rows="2">${gt[key + 'En'] || ''}</textarea></div>
     ${key === 'parkingArrival' ? `<div class="g2" style="margin-top:6px"><div class="fld"><label>Link DE</label><input type="text" id="gt-parkingArrivalLink-de" value="${gt.parkingArrivalLinkDe || ''}"></div><div class="fld"><label>Link EN</label><input type="text" id="gt-parkingArrivalLink-en" value="${gt.parkingArrivalLinkEn || ''}"></div></div>` : ''}
   </div>`).join('');
+}
+
+function renderGroupTermsSettings() {
+  if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
+  const gterm = CONFIG.groupTerms;
+
+  const cutoffEl = document.getElementById('gterm-cutoffdays');
+  if (cutoffEl) cutoffEl.value = gterm.cutOffDays;
+
+  const reductionC = document.getElementById('s-reductiontiers');
+  if (reductionC) {
+    reductionC.innerHTML = gterm.reductionTiers.map((r, i) => `<div style="padding:9px 0;border-bottom:1px solid var(--br)">
+      <div class="g2" style="margin-bottom:6px"><div class="fld"><label>Zeitraum DE</label><input type="text" id="rt-labelDe-${i}" value="${r.labelDe}"></div><div class="fld"><label>Zeitraum EN</label><input type="text" id="rt-labelEn-${i}" value="${r.labelEn}"></div></div>
+      <div style="display:flex;gap:8px;align-items:center"><div class="fld" style="max-width:120px"><label>Kostenlos %</label><input type="number" id="rt-pct-${i}" value="${r.pct}" min="0" max="100"></div>${gterm.reductionTiers.length > 1 ? `<button class="bsm bdng" onclick="removeReductionTier(${i})" style="margin-top:18px"><i class="ti ti-trash"></i></button>` : ''}</div>
+    </div>`).join('');
+  }
+
+  const cancellationC = document.getElementById('s-cancellationtiers');
+  if (cancellationC) {
+    cancellationC.innerHTML = gterm.cancellationTiers.map((r, i) => `<div style="padding:9px 0;border-bottom:1px solid var(--br)">
+      <div class="g2" style="margin-bottom:6px"><div class="fld"><label>Zeitraum DE</label><input type="text" id="ct-labelDe-${i}" value="${r.labelDe}"></div><div class="fld"><label>Zeitraum EN</label><input type="text" id="ct-labelEn-${i}" value="${r.labelEn}"></div></div>
+      <div class="g2" style="margin-bottom:6px"><div class="fld"><label>Zusatz DE (optional)</label><input type="text" id="ct-noteDe-${i}" value="${r.noteDe || ''}"></div><div class="fld"><label>Zusatz EN (optional)</label><input type="text" id="ct-noteEn-${i}" value="${r.noteEn || ''}"></div></div>
+      <div style="display:flex;gap:8px;align-items:center"><div class="fld" style="max-width:120px"><label>Gebühr %</label><input type="number" id="ct-pct-${i}" value="${r.pct}" min="0" max="100"></div>${gterm.cancellationTiers.length > 1 ? `<button class="bsm bdng" onclick="removeCancellationTier(${i})" style="margin-top:18px"><i class="ti ti-trash"></i></button>` : ''}</div>
+    </div>`).join('');
+  }
+
+  const paymentC = document.getElementById('s-paymentplan');
+  if (paymentC) {
+    paymentC.innerHTML = gterm.paymentPlan.map((p, i) => `<div style="padding:9px 0;border-bottom:1px solid var(--br)">
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:6px"><div class="fld" style="max-width:100px"><label>%</label><input type="number" id="pp-pct-${i}" value="${p.pct}" min="0" max="100"></div><div class="fld" style="flex:1"><label>Zeitpunkt DE</label><input type="text" id="pp-timingDe-${i}" value="${p.timingDe}"></div>${gterm.paymentPlan.length > 1 ? `<button class="bsm bdng" onclick="removePaymentTier(${i})"><i class="ti ti-trash"></i></button>` : ''}</div>
+      <div class="fld"><label>Zeitpunkt EN</label><input type="text" id="pp-timingEn-${i}" value="${p.timingEn}"></div>
+    </div>`).join('');
+  }
+}
+
+function addReductionTier() {
+  CONFIG.groupTerms.reductionTiers.push({ labelDe: '', labelEn: '', pct: 0 });
+  renderGroupTermsSettings();
+}
+
+function removeReductionTier(i) {
+  if (CONFIG.groupTerms.reductionTiers.length <= 1) return;
+  CONFIG.groupTerms.reductionTiers.splice(i, 1);
+  renderGroupTermsSettings();
+}
+
+function addCancellationTier() {
+  CONFIG.groupTerms.cancellationTiers.push({ labelDe: '', labelEn: '', pct: 0, noteDe: '', noteEn: '' });
+  renderGroupTermsSettings();
+}
+
+function removeCancellationTier(i) {
+  if (CONFIG.groupTerms.cancellationTiers.length <= 1) return;
+  CONFIG.groupTerms.cancellationTiers.splice(i, 1);
+  renderGroupTermsSettings();
+}
+
+function addPaymentTier() {
+  CONFIG.groupTerms.paymentPlan.push({ pct: 0, timingDe: '', timingEn: '' });
+  renderGroupTermsSettings();
+}
+
+function removePaymentTier(i) {
+  if (CONFIG.groupTerms.paymentPlan.length <= 1) return;
+  CONFIG.groupTerms.paymentPlan.splice(i, 1);
+  renderGroupTermsSettings();
 }
 
 function renderDiscountSettingsPanel() {
@@ -1167,6 +1271,30 @@ function saveSettings() {
   const parkingLinkEn = document.getElementById('gt-parkingArrivalLink-en');
   if (parkingLinkEn) CONFIG.groupTexts.parkingArrivalLinkEn = parkingLinkEn.value;
 
+  if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
+  const cutoffEl = document.getElementById('gterm-cutoffdays');
+  if (cutoffEl) CONFIG.groupTerms.cutOffDays = parseInt(cutoffEl.value) || 0;
+
+  CONFIG.groupTerms.reductionTiers = CONFIG.groupTerms.reductionTiers.map((r, i) => ({
+    labelDe: document.getElementById('rt-labelDe-' + i)?.value ?? r.labelDe,
+    labelEn: document.getElementById('rt-labelEn-' + i)?.value ?? r.labelEn,
+    pct: parseFloat(document.getElementById('rt-pct-' + i)?.value) || 0
+  }));
+
+  CONFIG.groupTerms.cancellationTiers = CONFIG.groupTerms.cancellationTiers.map((r, i) => ({
+    labelDe: document.getElementById('ct-labelDe-' + i)?.value ?? r.labelDe,
+    labelEn: document.getElementById('ct-labelEn-' + i)?.value ?? r.labelEn,
+    pct: parseFloat(document.getElementById('ct-pct-' + i)?.value) || 0,
+    noteDe: document.getElementById('ct-noteDe-' + i)?.value ?? r.noteDe,
+    noteEn: document.getElementById('ct-noteEn-' + i)?.value ?? r.noteEn
+  }));
+
+  CONFIG.groupTerms.paymentPlan = CONFIG.groupTerms.paymentPlan.map((p, i) => ({
+    pct: parseFloat(document.getElementById('pp-pct-' + i)?.value) || 0,
+    timingDe: document.getElementById('pp-timingDe-' + i)?.value ?? p.timingDe,
+    timingEn: document.getElementById('pp-timingEn-' + i)?.value ?? p.timingEn
+  }));
+
   localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
   buildDiscountDropdown();
 
@@ -1258,6 +1386,45 @@ function renderTextBlock(text) {
   return (text || '').split('\n').map(line => line.trim() === '' ? '<div style="height:2mm"></div>' : `<p class="body-text">${line}</p>`).join('');
 }
 
+// Builds the cut-off/reduction/cancellation/payment paragraphs for the Group Offer PDF
+// from the structured values in CONFIG.groupTerms, so sales can edit the day counts and
+// percentages as numbers instead of hand-editing prose.
+function buildGroupTermsTexts(t) {
+  const gt = CONFIG.groupTexts;
+  const terms = CONFIG.groupTerms;
+
+  const cutOffDateText = t(gt.cutOffDateDe, gt.cutOffDateEn).replace('{days}', terms.cutOffDays);
+
+  const reductionText = terms.reductionTiers.map(r => {
+    const label = t(r.labelDe, r.labelEn);
+    const phrase = r.pct > 0
+      ? t(`kostenlose Reduktion von bis zu ${r.pct}% des gebuchten Kontingents`, `free reduction of up to ${r.pct}% of the booked block`)
+      : t('keine kostenlose Reduktion möglich', 'no free reduction possible');
+    return `${label}: ${phrase}`;
+  }).join('\n');
+
+  const cancellationText = [
+    t(gt.cancellationIntroDe, gt.cancellationIntroEn),
+    ...terms.cancellationTiers.map(r => {
+      const label = t(r.labelDe, r.labelEn);
+      const note = t(r.noteDe, r.noteEn);
+      const feePhrase = t(`Gebühr von ${r.pct}%`, `penalty of ${r.pct}%`);
+      return `${label}: ${feePhrase}${note ? ' ' + note : ''}`;
+    }),
+    '',
+    t(gt.cancellationForceMajeureDe, gt.cancellationForceMajeureEn)
+  ].join('\n');
+
+  const paymentText = [
+    t(gt.paymentIntroDe, gt.paymentIntroEn),
+    ...terms.paymentPlan.map(p => `${p.pct}% ${t(p.timingDe, p.timingEn)}`),
+    '',
+    t(gt.paymentOutroDe, gt.paymentOutroEn)
+  ].join('\n');
+
+  return { cutOffDateText, reductionText, cancellationText, paymentText };
+}
+
 function genGroupOffer() {
   const err = document.getElementById('grpErrMsg');
   err.style.display = 'none';
@@ -1293,6 +1460,7 @@ function genGroupOffer() {
   const salLine = (isNeutralSalutation ? salLbl : salLbl + ' ' + contactName) + ',';
   const gt = CONFIG.groupTexts;
   const introText = document.getElementById('grp-intro').value.trim() || t(gt.introDefaultDe, gt.introDefaultEn);
+  const groupTermsTexts = buildGroupTermsTexts(t);
 
   const dateLine = `Andermatt, ${formatFullDate(new Date())}`;
 
@@ -1383,13 +1551,13 @@ ${blocksHtml}
   <p class="body-text">${t(gt.pleaseNoteDe, gt.pleaseNoteEn)}</p>
   <div class="section-title">${t('Storno- und Cut-off-Bedingungen', 'Cancellation and Cut-Off Terms')}</div>
   <div class="subsection-title">${t('Cut-off-Datum', 'Cut-Off Date')}</div>
-  <p class="body-text">${t(gt.cutOffDateDe, gt.cutOffDateEn)}</p>
+  <p class="body-text">${groupTermsTexts.cutOffDateText}</p>
   <div class="subsection-title">${t('Reduktion des Kontingents nach Cut-off', 'Reduction of the Block After Cut-Off')}</div>
-  ${renderTextBlock(t(gt.reductionAfterCutOffDe, gt.reductionAfterCutOffEn))}
+  ${renderTextBlock(groupTermsTexts.reductionText)}
   <div class="subsection-title">${t('Stornobedingungen', 'Cancellation Policy')}</div>
-  ${renderTextBlock(t(gt.cancellationPolicyDe, gt.cancellationPolicyEn))}
+  ${renderTextBlock(groupTermsTexts.cancellationText)}
   <div class="subsection-title">${t('Zahlungsbedingungen', 'Payment Terms')}</div>
-  ${renderTextBlock(t(gt.paymentTermsDe, gt.paymentTermsEn))}
+  ${renderTextBlock(groupTermsTexts.paymentText)}
   <div class="closing">
     <p>${t(gt.closingIntroDe, gt.closingIntroEn)}</p>
     <p>${t(gt.closingGreetingDe, gt.closingGreetingEn)}</p>
