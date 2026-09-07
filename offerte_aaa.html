@@ -84,6 +84,7 @@ textarea{resize:vertical;min-height:52px;line-height:1.5}
 .lsal{margin-bottom:1rem;font-size:14px;font-weight:600}
 .lint{margin-bottom:1.5rem;color:var(--md);font-size:13px;line-height:1.8}
 .oc{background:var(--bg);border:1px solid var(--br);border-radius:var(--rmd);padding:1.25rem 1.5rem;margin:1.25rem 0}
+.occap{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--g);margin-bottom:6px}
 .oct{font-size:14px;font-weight:600;margin-bottom:4px}
 .ocs{font-size:12px;color:var(--mu);margin-bottom:1.25rem}
 table.pt{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
@@ -412,7 +413,7 @@ else Object.keys(DEFAULT_CONFIG.groupTexts).forEach(k => { if (!(k in CONFIG.gro
 if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
 
 function createRoom() {
-  return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', customStorno: false, customStornoText: '' };
+  return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', rateTouched: false, customStorno: false, customStornoText: '' };
 }
 
 function formatCurrency(n) {
@@ -443,7 +444,7 @@ function setLang(l) {
   buildSalutationOptions('sal');
   buildSalutationOptions('grp-sal');
   renderRoomPanels();
-  renderExtrasChecklist();
+  renderExtrasChecklist({ keepSelection: true, keepPrices: true });
   renderGroupBlocks();
   updateDateDisplay();
   syncGroupIntroDefault();
@@ -467,20 +468,41 @@ function goTab(name) {
     document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
   });
   if (name === 'history') renderHistoryList();
-  if (name === 'group') renderGroupTermsSettings();
+  // Carry any values typed into the terms fields back into CONFIG before re-rendering
+  // them, otherwise leaving and re-entering the tab silently reverts unsaved edits.
+  if (name === 'group') { readGroupTermsFromDom(); renderGroupTermsSettings(); }
   if (name === 'settings') { document.getElementById('s-texts').innerHTML = ''; renderSettingsPanel(); }
 }
 
 const EN_SALUTATIONS = [['ef', 'Dear Ms.'], ['em', 'Dear Mr.'], ['en2', 'Dear Sir or Madam']];
 const DE_SALUTATIONS = [['df', 'Sehr geehrte Frau'], ['dm', 'Sehr geehrter Herr'], ['dn', 'Guten Tag']];
 
+// Both salutation lists hold the same three entries (female / male / neutral) in the
+// same order, so a selection can be carried from one language to the other by index.
+function salutationIndex(code) {
+  const found = DE_SALUTATIONS.concat(EN_SALUTATIONS).findIndex(([v]) => v === code);
+  return found >= 0 ? found % DE_SALUTATIONS.length : 0;
+}
+
 function buildSalutationOptions(elementId = 'sal') {
   const el = document.getElementById(elementId);
   if (!el) return;
   const opts = lang === 'de' ? DE_SALUTATIONS : EN_SALUTATIONS;
+  // Keep the current choice across a language switch - it used to snap back to the
+  // first entry, so a chosen "Herr" silently became "Frau" in the letter.
+  const keep = el.value ? salutationIndex(el.value) : 0;
   el.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-  const match = opts.find(([v]) => v.charAt(0) === (lang === 'de' ? 'd' : 'e'));
-  if (match) el.value = match[0];
+  el.value = opts[keep][0];
+}
+
+// Selects the equivalent of `code` in whichever language is active, so restoring a
+// German salutation while the UI is in English can't leave the select on no option
+// at all (which would make gen() throw when reading the selected label).
+function setSalutationValue(elementId, code) {
+  const el = document.getElementById(elementId);
+  if (!el || !code) return;
+  const opts = lang === 'de' ? DE_SALUTATIONS : EN_SALUTATIONS;
+  el.value = opts[salutationIndex(code)][0];
 }
 
 function buildDiscountDropdown() {
@@ -557,7 +579,7 @@ function renderRoomTabs() {
 
 function renderRoomPanels() {
   const c = document.getElementById('rpanels');
-  c.innerHTML = rooms.map((r, i) => `<div class="rpanel ${i === activeRoomIndex ? 'active' : ''}">${rooms.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="removeRoom(${i})"><i class="ti ti-trash"></i>${lang === 'de' ? 'Entfernen' : 'Remove'}</button></div>` : ''}<div class="fld" style="margin-bottom:12px"><label>${lang === 'de' ? 'Zimmertyp-Code' : 'Room Type Code'}</label><select onchange="setRoomTypeCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(r.size, r.cat))}</select></div><div class="togw"><button class="tbtn ${r.priceMode === 'total' ? 'active' : ''}" onclick="setPriceMode(${i},'total')">${lang === 'de' ? 'Gesamtpreis' : 'Total price'}</button><button class="tbtn ${r.priceMode === 'perNight' ? 'active' : ''}" onclick="setPriceMode(${i},'perNight')">${lang === 'de' ? 'Preis/Nacht' : 'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode === 'total' ? 'Gesamtpreis CHF' : 'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="rooms[${i}].rate=this.value">${CONFIG.rates.map(rt => `<option value="${rt.id}" ${r.rate === rt.id ? 'selected' : ''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Benutzerdefinierte Storno' : 'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRoomPanels()"><option value="auto" ${!r.customStorno ? 'selected' : ''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno ? 'selected' : ''}>Benutzerdefiniert</option></select></div></div>${r.customStorno ? `<div class="fld" style="margin-top:8px"><label>${lang === 'de' ? 'Stornotext' : 'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText || ''}</textarea></div>` : ''}</div>`).join('');
+  c.innerHTML = rooms.map((r, i) => `<div class="rpanel ${i === activeRoomIndex ? 'active' : ''}">${rooms.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="removeRoom(${i})"><i class="ti ti-trash"></i>${lang === 'de' ? 'Entfernen' : 'Remove'}</button></div>` : ''}<div class="fld" style="margin-bottom:12px"><label>${lang === 'de' ? 'Zimmertyp-Code' : 'Room Type Code'}</label><select onchange="setRoomTypeCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(r.size, r.cat))}</select></div><div class="togw"><button class="tbtn ${r.priceMode === 'total' ? 'active' : ''}" onclick="setPriceMode(${i},'total')">${lang === 'de' ? 'Gesamtpreis' : 'Total price'}</button><button class="tbtn ${r.priceMode === 'perNight' ? 'active' : ''}" onclick="setPriceMode(${i},'perNight')">${lang === 'de' ? 'Preis/Nacht' : 'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode === 'total' ? 'Gesamtpreis CHF' : 'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="setRoomRate(${i},this.value)">${CONFIG.rates.map(rt => `<option value="${rt.id}" ${r.rate === rt.id ? 'selected' : ''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Benutzerdefinierte Storno' : 'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRoomPanels()"><option value="auto" ${!r.customStorno ? 'selected' : ''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno ? 'selected' : ''}>Benutzerdefiniert</option></select></div></div>${r.customStorno ? `<div class="fld" style="margin-top:8px"><label>${lang === 'de' ? 'Stornotext' : 'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText || ''}</textarea></div>` : ''}</div>`).join('');
 }
 
 function setRoomTypeCode(i, code) {
@@ -580,16 +602,50 @@ function applyDefaultRateCodes() {
   const season = getSeasonForDate(arrivalDate);
   const defaultRate = getDefaultRateCodeForStay(nights, season);
   if (!CONFIG.rates.some(rt => rt.id === defaultRate)) return;
-  rooms.forEach(r => { r.rate = defaultRate; });
+  // Only rooms whose rate the user hasn't picked by hand - a deliberate NRF must not be
+  // reset to BAR/EXT just because the dates were adjusted afterwards.
+  rooms.forEach(r => { if (!r.rateTouched) r.rate = defaultRate; });
+}
+
+function setRoomRate(i, rateId) {
+  rooms[i].rate = rateId;
+  rooms[i].rateTouched = true;
 }
 
 function setPriceMode(i, m) { rooms[i].priceMode = m; rooms[i].priceVal = ''; renderRoomPanels(); }
 function selectRoom(i) { activeRoomIndex = i; renderRoomTabs(); renderRoomPanels(); }
-function addRoom() { if (rooms.length < 5) { rooms.push(createRoom()); activeRoomIndex = rooms.length - 1; renderRoomTabs(); renderRoomPanels(); } }
+function addRoom() {
+  if (rooms.length >= 5) return;
+  rooms.push(createRoom());
+  activeRoomIndex = rooms.length - 1;
+  // A room added after the dates were picked must get the same automatic rate as the
+  // others - it used to keep the plain BAR fallback while room 1 already showed EXT.
+  applyDefaultRateCodes();
+  renderRoomTabs();
+  renderRoomPanels();
+}
 function removeRoom(i) { rooms.splice(i, 1); if (activeRoomIndex >= rooms.length) activeRoomIndex = rooms.length - 1; renderRoomTabs(); renderRoomPanels(); }
 
-function renderExtrasChecklist() {
+// Rebuilds the extras checklist. A plain re-render would drop everything the user has
+// already ticked, so callers that only refresh the markup (language switch, settings
+// save) ask for the selection to be carried over; a settings save additionally refreshes
+// the prices, since the configured defaults may just have changed.
+function renderExtrasChecklist({ keepSelection = false, keepPrices = false } = {}) {
   const c = document.getElementById('xcreate');
+
+  const prev = {};
+  if (keepSelection) {
+    CONFIG.extras.forEach(ex => {
+      const cb = document.getElementById('x-' + ex.id);
+      if (!cb) return;
+      prev[ex.id] = {
+        checked: cb.checked,
+        qty: document.getElementById('xq-' + ex.id)?.value,
+        price: keepPrices ? document.getElementById('xp-' + ex.id)?.value : undefined
+      };
+    });
+  }
+
   c.innerHTML = CONFIG.extras.map(ex => {
     const label = lang === 'de' ? ex.lDe : ex.lEn;
     const hint = ex.comp ? (lang === 'de' ? 'Kostenlos' : 'Complimentary') : ex.perNight ? `CHF ${ex.price}${lang === 'de' ? '/Nacht' : '/night'}` : `CHF ${ex.price}`;
@@ -598,6 +654,15 @@ function renderExtrasChecklist() {
     const price = !ex.comp ? `<input type="number" id="xp-${ex.id}" value="${ex.price}" style="width:72px" min="0">` : '';
     return `<div class="crow"><input type="checkbox" id="x-${ex.id}"><label for="x-${ex.id}">${label} <span class="ph">(${hint})</span></label>${qty}${price}</div>`;
   }).join('');
+
+  Object.entries(prev).forEach(([id, s]) => {
+    const cb = document.getElementById('x-' + id);
+    if (cb) cb.checked = s.checked;
+    const q = document.getElementById('xq-' + id);
+    if (q && s.qty != null) q.value = s.qty;
+    const p = document.getElementById('xp-' + id);
+    if (p && s.price != null) p.value = s.price;
+  });
 }
 
 function getSelectedExtras(nights) {
@@ -660,6 +725,58 @@ function computeRoomPricing(i, nights, discount) {
   };
 }
 
+// The most recently generated offer, as data. Feeds the preview, the PDF and the
+// Outlook mail (see renderOfferPreview / mkPDF / copyOut).
+let lastOffer = null;
+
+// Shared company details, so letter, PDF and mail signature can't disagree.
+const COMPANY = {
+  name: 'Andermatt Alpine Apartments',
+  team: { de: 'Reservations Team', en: 'Reservations Team' },
+  street: 'Gütschgasse 6',
+  city: 'CH-6490 Andermatt',
+  phone: '+41 41 888 78 00',
+  mail: 'stay@alpine.apartments',
+  web: 'alpine.apartments'
+};
+
+function renderOfferPreview(o) {
+  const t = (de, en) => lang === 'de' ? de : en;
+
+  const rowHtml = r => {
+    const strike = r.kind === 'strike';
+    const labelStyle = strike ? ' style="text-decoration:line-through;color:var(--mu)"' : '';
+    const amtStyle = strike
+      ? ' style="text-decoration:line-through;color:var(--mu)"'
+      : r.kind === 'discount' ? ' style="color:#2D7D46"' : '';
+    const label = r.kind === 'strong' ? `<strong>${r.label}</strong>` : r.label;
+    const amount = r.kind === 'strong' ? `<strong>${r.amount}</strong>` : r.amount;
+    return `<tr><td${labelStyle}>${label}</td><td class="muc">${r.detail}</td><td class="amt"${amtStyle}>${amount}</td></tr>`;
+  };
+
+  const cards = o.rooms.map(room => `<div class="oc">
+    ${room.caption ? `<div class="occap">${room.caption}</div>` : ''}
+    <div class="oct">${room.title} <span class="rbdg">${room.rate}</span></div>
+    <div class="ocs">${o.arrival} – ${o.departure} · ${o.nights} ${t('Nächte', 'nights')}${o.guestInfo ? ' · ' + o.guestInfo : ''}</div>
+    <table class="pt">
+      <thead><tr><th style="width:34%">${t('Position', 'Item')}</th><th style="width:38%">Details</th><th class="amt" style="width:28%">${t('Betrag', 'Amount')}</th></tr></thead>
+      <tbody>${room.rows.map(rowHtml).join('')}<tr class="trtot"><td colspan="2"><strong>${t('Gesamtbetrag', 'Total')}</strong></td><td class="amt"><strong>${room.total}</strong></td></tr></tbody>
+    </table>
+    <div class="storno"><strong>${t('Storno:', 'Cancellation:')}</strong> ${room.storno}${room.pay ? ' ' + room.pay : ''}</div>
+  </div>`).join('');
+
+  const grand = o.grand
+    ? `<div class="oc" style="border-color:var(--gb);background:var(--gp)"><table class="pt"><tbody>${o.grand.rows.map(r => `<tr><td>${r.label}</td><td class="muc">${r.detail}</td><td class="amt">${r.amount}</td></tr>`).join('')}<tr class="trgrand"><td colspan="2"><strong>${o.grand.label}</strong></td><td class="amt"><strong>${o.grand.total}</strong></td></tr></tbody></table></div>`
+    : '';
+
+  const outro = o.outro.map(p => {
+    const body = p.link ? `${p.text} <a href="https://${p.link}" style="color:var(--g)">${p.link}</a>` : p.text;
+    return `<div class="lout"${p.small ? ' style="font-size:12px;color:var(--mu)"' : ''}>${body}</div>`;
+  }).join('');
+
+  return `<div class="lsal">${o.salLine}</div><div class="lint">${o.intro}</div>${cards}${grand}<div class="vnote"><span>${o.valid}</span></div><div class="lcta">${o.cta}</div>${outro}${o.nrfHint ? `<div class="lout" data-nrf-hint style="font-weight:700;color:var(--dk)">${o.nrfHint}</div>` : ''}<div class="lout" style="font-weight:600;color:var(--dk)">${o.greet}</div>`;
+}
+
 function getStornoText(rateCode, season, customText) {
   if (customText) return customText;
   const days = season === 'summer' ? rateCode.summer : rateCode.winter;
@@ -687,7 +804,16 @@ function gen() {
   }
   for (let i = 0; i < rooms.length; i++) {
     if (!(parseFloat(rooms[i].priceVal) > 0)) {
-      err.textContent = `Zimmer ${i + 1}: Preis fehlt.`;
+      err.textContent = lang === 'de' ? `Zimmer ${i + 1}: Preis fehlt.` : `Room ${i + 1}: price is missing.`;
+      err.style.display = 'block';
+      return;
+    }
+    // A total below the cleaning fee would print a negative accommodation line.
+    const cleaningFee = CONFIG.cleaning[rooms[i].size] || 105;
+    if (rooms[i].priceMode === 'total' && parseFloat(rooms[i].priceVal) <= cleaningFee) {
+      err.textContent = lang === 'de'
+        ? `Zimmer ${i + 1}: Gesamtpreis muss über der Endreinigung (${formatCurrency(cleaningFee)}) liegen.`
+        : `Room ${i + 1}: total price must be higher than the cleaning fee (${formatCurrency(cleaningFee)}).`;
       err.style.display = 'block';
       return;
     }
@@ -716,48 +842,87 @@ function gen() {
   const greetCfg = CONFIG.greets[0] || { de: 'Mit freundlichen Grüssen', en: 'Kind regards' };
   const greet = lang === 'de' ? greetCfg.de : greetCfg.en;
 
-  let cards = '';
-  roomData.forEach((r, i) => {
-    const storno = getStornoText(r.rc, r.season, r.customStorno);
-    const pay = r.customStorno ? '' : (lang === 'de' ? r.rc.payDe : r.rc.payEn);
-    const isFirstRoom = i === 0;
-    let rows = '';
+  // In a Vergleichsofferte the cards are alternatives for the same stay, so the extras
+  // belong on every option - otherwise option 1 looks more expensive than the rest and
+  // the comparison is meaningless. In a Multi-Booking the apartments are booked
+  // together, so the extras are charged once, on the first card.
+  const extrasOnEveryRoom = mode === 'compare';
+  const roomHasExtras = i => extrasOnEveryRoom || i === 0;
+  const roomTotals = roomData.map((r, i) => r.tot + (roomHasExtras(i) ? extrasTotal : 0));
 
-    if (r.discount && r.discAmt > 0) {
-      rows += `<tr><td>${lang === 'de' ? 'Logis (Original)' : 'Accommodation (original)'}</td><td class="muc">${nights}N × ${formatCurrency(r.pnOrig)}</td><td class="amt" style="text-decoration:line-through;color:var(--mu)">${formatCurrency(r.loOrig)}</td></tr>`;
-      rows += `<tr><td>${lang === 'de' ? 'Rabatt' : 'Discount'} ${r.discount.code} (–${r.discount.pct}%)</td><td class="muc">${r.discount.label}</td><td class="amt" style="color:#2D7D46">–${formatCurrency(r.discAmt)}</td></tr>`;
-      rows += `<tr><td><strong>${lang === 'de' ? 'Logis' : 'Accommodation'}</strong></td><td class="muc">${nights}N × ${formatCurrency(r.pn)}</td><td class="amt"><strong>${formatCurrency(r.lo)}</strong></td></tr>`;
-    } else {
-      rows += `<tr><td>${lang === 'de' ? 'Logis' : 'Accommodation'}</td><td class="muc">${nights}N × ${formatCurrency(r.pn)}</td><td class="amt">${formatCurrency(r.lo)}</td></tr>`;
-    }
+  const t = (de, en) => lang === 'de' ? de : en;
 
-    rows += `<tr><td>${lang === 'de' ? 'Endreinigung' : 'End cleaning'}</td><td class="muc">${SIZE_LABELS[r.size]}</td><td class="amt">${formatCurrency(r.cl)}</td></tr>`;
+  // The offer is assembled as data first. The on-screen preview, the PDF and the Outlook
+  // mail are then rendered from this one model, so the three can't drift apart - they
+  // used to be produced by scraping the preview's DOM and guessing formatting back out
+  // of inline styles.
+  const optionCount = roomData.length;
+  const offerModel = {
+    nr, today, guest, salLine,
+    intro: getText('intro'),
+    valid: getText('valid'),
+    cta: getText('cta'),
+    outro: [
+      { text: getText('outro1'), link: getStdInfo('catLink') },
+      { text: getText('outro2') },
+      { text: `${getStdInfo('wlan')} · ${getStdInfo('parking')}`, small: true },
+      { text: getText('outro3') }
+    ],
+    nrfHint: computeNrfHint(),
+    greet, mode, nights, guestInfo,
+    arrival: formatDate(arrivalDate),
+    departure: formatDate(departureDate),
+    arrivalFull: formatFullDate(arrivalDate),
+    departureFull: formatFullDate(departureDate),
+    rooms: roomData.map((r, i) => {
+      const rows = [];
+      if (r.discount && r.discAmt > 0) {
+        rows.push({ label: t('Logis (Original)', 'Accommodation (original)'), detail: `${nights}N × ${formatCurrency(r.pnOrig)}`, amount: formatCurrency(r.loOrig), kind: 'strike' });
+        rows.push({ label: `${t('Rabatt', 'Discount')} ${r.discount.code} (–${r.discount.pct}%)`, detail: r.discount.label, amount: '–' + formatCurrency(r.discAmt), kind: 'discount' });
+        rows.push({ label: t('Logis', 'Accommodation'), detail: `${nights}N × ${formatCurrency(r.pn)}`, amount: formatCurrency(r.lo), kind: 'strong' });
+      } else {
+        rows.push({ label: t('Logis', 'Accommodation'), detail: `${nights}N × ${formatCurrency(r.pn)}`, amount: formatCurrency(r.lo), kind: 'normal' });
+      }
+      rows.push({ label: t('Endreinigung', 'End cleaning'), detail: SIZE_LABELS[r.size], amount: formatCurrency(r.cl), kind: 'normal' });
+      if (roomHasExtras(i)) {
+        extras.forEach(e => rows.push({
+          label: e.label, detail: e.detail,
+          amount: e.amt > 0 ? formatCurrency(e.amt) : t('Kostenlos', 'Complimentary'),
+          kind: 'normal'
+        }));
+      }
+      return {
+        title: r.fullCat,
+        rate: r.rate,
+        // Only worth numbering when there is something to compare or add up.
+        caption: optionCount < 2 ? '' : (mode === 'compare' ? `${t('Option', 'Option')} ${i + 1}` : `${t('Apartment', 'Apartment')} ${i + 1}`),
+        storno: getStornoText(r.rc, r.season, r.customStorno),
+        pay: r.customStorno ? '' : (lang === 'de' ? r.rc.payDe : r.rc.payEn),
+        rows,
+        total: formatCurrency(roomTotals[i])
+      };
+    }),
+    grand: mode === 'multi' && rooms.length > 1
+      ? {
+        rows: roomData.map((r, i) => ({
+          label: r.fullCat,
+          detail: roomHasExtras(i) && extrasTotal > 0 ? t('inkl. Extras', 'incl. extras') : '',
+          amount: formatCurrency(roomTotals[i])
+        })),
+        label: t('Gesamtbetrag alle Apartments', 'Grand total all apartments'),
+        total: formatCurrency(roomTotals.reduce((s, x) => s + x, 0))
+      }
+      : null
+  };
+  lastOffer = offerModel;
 
-    if (isFirstRoom) {
-      extras.forEach(e => {
-        rows += `<tr><td>${e.label}</td><td class="muc">${e.detail}</td><td class="amt">${e.amt > 0 ? formatCurrency(e.amt) : (lang === 'de' ? 'Kostenlos' : 'Complimentary')}</td></tr>`;
-      });
-    }
-
-    const roomTotal = r.tot + (isFirstRoom ? extrasTotal : 0);
-    cards += `<div class="oc"><div class="oct">${r.fullCat} <span class="rbdg">${r.rate}</span></div><div class="ocs">${formatDate(arrivalDate)} – ${formatDate(departureDate)} · ${nights} ${lang === 'de' ? 'Nächte' : 'nights'}${guestInfo ? ' · ' + guestInfo : ''}</div><table class="pt"><thead><tr><th style="width:34%">${lang === 'de' ? 'Position' : 'Item'}</th><th style="width:38%">Details</th><th class="amt" style="width:28%">${lang === 'de' ? 'Betrag' : 'Amount'}</th></tr></thead><tbody>${rows}<tr class="trtot"><td colspan="2"><strong>${lang === 'de' ? 'Gesamtbetrag' : 'Total'}</strong></td><td class="amt"><strong>${formatCurrency(roomTotal)}</strong></td></tr></tbody></table><div class="storno"><strong>${lang === 'de' ? 'Storno:' : 'Cancellation:'}</strong> ${storno}${pay ? ' ' + pay : ''}</div></div>`;
-  });
-
-  let grand = '';
-  if (mode === 'multi' && rooms.length > 1) {
-    const grandTotal = roomData.reduce((s, r) => s + r.tot, 0) + extrasTotal;
-    grand = `<div class="oc" style="border-color:var(--gb);background:var(--gp)"><table class="pt"><tbody>${roomData.map((r, i) => `<tr><td>${r.fullCat}</td><td class="muc">${i === 0 && extrasTotal > 0 ? (lang === 'de' ? 'inkl. Extras' : 'incl. extras') : ''}</td><td class="amt">${formatCurrency(r.tot + (i === 0 ? extrasTotal : 0))}</td></tr>`).join('')}<tr class="trgrand"><td colspan="2"><strong>${lang === 'de' ? 'Gesamtbetrag alle Apartments' : 'Grand total all apartments'}</strong></td><td class="amt"><strong>${formatCurrency(grandTotal)}</strong></td></tr></tbody></table></div>`;
-  }
-
-  const nrfHint = computeNrfHint();
-
-  document.getElementById('letterOut').innerHTML = `<div class="lsal">${salLine}</div><div class="lint">${getText('intro')}</div>${cards}${grand}<div class="vnote"><span>${getText('valid')}</span></div><div class="lcta">${getText('cta')}</div><div class="lout">${getText('outro1')} <a href="https://${getStdInfo('catLink')}" style="color:var(--g)">${getStdInfo('catLink')}</a></div><div class="lout">${getText('outro2')}</div><div class="lout" style="font-size:12px;color:var(--mu)">${getStdInfo('wlan')} · ${getStdInfo('parking')}</div><div class="lout">${getText('outro3')}</div>${nrfHint ? `<div class="lout" data-nrf-hint style="font-weight:700;color:var(--dk)">${nrfHint}</div>` : ''}<div class="lout" style="font-weight:600;color:var(--dk)">${greet}</div>`;
+  document.getElementById('letterOut').innerHTML = renderOfferPreview(offerModel);
 
   document.getElementById('prevWrap').style.display = 'block';
   document.getElementById('prevWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const note = document.getElementById('inote').value.trim();
-  const totalAll = roomData.reduce((s, r) => s + r.tot, 0) + extrasTotal;
+  const totalAll = roomTotals.reduce((s, t) => s + t, 0);
   const journalLines = [
     `─────────────────────────────`,
     `Offerte Nr. ${nr}  ·  ${today}`,
@@ -770,8 +935,8 @@ function gen() {
       `Zimmer ${i + 1}: ${r.fullCat}  [${r.rate}]`,
       `  Preis/Nacht:   ${formatCurrency(r.pn)}`,
       `  Endreinigung:  ${formatCurrency(r.cl)}`,
-      ...(i === 0 && extras.length > 0 ? extras.map(e => `  ${e.label}: ${e.amt > 0 ? formatCurrency(e.amt) : 'Kostenlos'}`) : []),
-      `  Zimmer Total:  ${formatCurrency(r.tot + (i === 0 ? extrasTotal : 0))}`
+      ...(roomHasExtras(i) ? extras.map(e => `  ${e.label}: ${e.amt > 0 ? formatCurrency(e.amt) : 'Kostenlos'}`) : []),
+      `  Zimmer Total:  ${formatCurrency(roomTotals[i])}`
     ].join('\n')),
     ``,
     `Gesamtbetrag: ${formatCurrency(totalAll)}`,
@@ -783,7 +948,24 @@ function gen() {
     rooms: roomData.map(r => r.fullCat).join(' + '),
     total: formatCurrency(totalAll),
     nights, note, mode,
-    journal: journalLines.join('\n')
+    journal: journalLines.join('\n'),
+    // Everything needed to rebuild the form via "Als Vorlage laden"; without this the
+    // button could only restore the guest name and note.
+    template: {
+      arrival: arrivalDate.toISOString(),
+      departure: departureDate.toISOString(),
+      mode, adults, kids,
+      salutation: sal.value,
+      discount: discount ? discount.code : '',
+      rooms: JSON.parse(JSON.stringify(rooms)),
+      extras: CONFIG.extras
+        .filter(ex => document.getElementById('x-' + ex.id)?.checked)
+        .map(ex => ({
+          id: ex.id,
+          qty: document.getElementById('xq-' + ex.id)?.value || '',
+          price: document.getElementById('xp-' + ex.id)?.value || ''
+        }))
+    }
   });
   if (offerHistory.length > 20) offerHistory.pop();
   localStorage.setItem('aaa_h8', JSON.stringify(offerHistory));
@@ -794,6 +976,8 @@ function resetForm() {
   document.getElementById('adults').value = '';
   document.getElementById('kids').value = '';
   document.getElementById('inote').value = '';
+  // A leftover discount would otherwise be applied silently to the next offer.
+  document.getElementById('discountInput').value = '';
   arrivalDate = null;
   departureDate = null;
   calStep = 1;
@@ -903,10 +1087,13 @@ function pickDay(e, y, m, d) {
   } else {
     departureDate = dt;
     calStep = 1;
-    updateDateDisplay();
     applyDefaultRateCodes();
     renderRoomPanels();
   }
+  // Refresh the trigger label on every pick, not just once the departure is set -
+  // otherwise choosing a new arrival left the previous complete range on screen while
+  // the offer could no longer be generated ("Bitte Zeitraum wählen").
+  updateDateDisplay();
   renderCalendar();
 }
 
@@ -976,7 +1163,40 @@ function loadFromHistory(i, e) {
   e.stopPropagation();
   const h = offerHistory[i];
   document.getElementById('gname').value = h.guest;
-  if (h.note) document.getElementById('inote').value = h.note;
+  document.getElementById('inote').value = h.note || '';
+
+  // Entries written before the template was stored can only restore name and note.
+  const tpl = h.template;
+  if (tpl) {
+    arrivalDate = tpl.arrival ? new Date(tpl.arrival) : null;
+    departureDate = tpl.departure ? new Date(tpl.departure) : null;
+    calStep = 1;
+    if (arrivalDate) { calYear = arrivalDate.getFullYear(); calMonth = arrivalDate.getMonth(); }
+    updateDateDisplay();
+    renderCalendar();
+
+    rooms = (tpl.rooms || []).map(r => Object.assign(createRoom(), r, { rateTouched: true }));
+    if (!rooms.length) rooms = [createRoom()];
+    activeRoomIndex = 0;
+
+    document.getElementById('adults').value = tpl.adults || '';
+    document.getElementById('kids').value = tpl.kids || '';
+    setSalutationValue('sal', tpl.salutation);
+    document.getElementById('discountInput').value = tpl.discount || '';
+
+    renderExtrasChecklist();
+    (tpl.extras || []).forEach(x => {
+      const cb = document.getElementById('x-' + x.id);
+      if (cb) cb.checked = true;
+      const q = document.getElementById('xq-' + x.id);
+      if (q && x.qty) q.value = x.qty;
+      const p = document.getElementById('xp-' + x.id);
+      if (p && x.price) p.value = x.price;
+    });
+
+    setMode(tpl.mode || 'compare');
+  }
+
   goTab('create');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1031,7 +1251,7 @@ const GROUP_TEXT_FIELDS = [
   ['bikeSkiStorage', 'Bicycle and Ski Storage'],
   ['petsSmoking', 'Pets and Smoking'],
   ['pleaseNote', 'Please Note'],
-  ['cutOffDate', 'Cut-Off Date (Platzhalter {days} = Cut-off-Tage, siehe unten)'],
+  ['cutOffDate', 'Cut-Off Date (Platzhalter {days} = Cut-off-Tage aus dem Gruppenofferte-Tab)'],
   ['cancellationIntro', 'Stornobedingungen – Einleitungssatz (vor den Stufen)'],
   ['cancellationForceMajeure', 'Stornobedingungen – Force-Majeure-Klausel (nach den Stufen)'],
   ['paymentIntro', 'Zahlungsbedingungen – Einleitungssatz (vor dem Zahlungsplan)'],
@@ -1088,71 +1308,94 @@ function renderGroupTermsSettings() {
 }
 
 function addReductionTier() {
+  readGroupTermsFromDom();
   CONFIG.groupTerms.reductionTiers.push({ labelDe: '', labelEn: '', pct: 0 });
   renderGroupTermsSettings();
 }
 
 function removeReductionTier(i) {
   if (CONFIG.groupTerms.reductionTiers.length <= 1) return;
+  readGroupTermsFromDom();
   CONFIG.groupTerms.reductionTiers.splice(i, 1);
   renderGroupTermsSettings();
 }
 
 function addCancellationTier() {
+  readGroupTermsFromDom();
   CONFIG.groupTerms.cancellationTiers.push({ labelDe: '', labelEn: '', pct: 0, noteDe: '', noteEn: '' });
   renderGroupTermsSettings();
 }
 
 function removeCancellationTier(i) {
   if (CONFIG.groupTerms.cancellationTiers.length <= 1) return;
+  readGroupTermsFromDom();
   CONFIG.groupTerms.cancellationTiers.splice(i, 1);
   renderGroupTermsSettings();
 }
 
 function addPaymentTier() {
+  readGroupTermsFromDom();
   CONFIG.groupTerms.paymentPlan.push({ pct: 0, timingDe: '', timingEn: '' });
   renderGroupTermsSettings();
 }
 
 function removePaymentTier(i) {
   if (CONFIG.groupTerms.paymentPlan.length <= 1) return;
+  readGroupTermsFromDom();
   CONFIG.groupTerms.paymentPlan.splice(i, 1);
   renderGroupTermsSettings();
 }
 
+// Reads one numeric group-terms field. Missing input (panel not rendered yet) or a blank
+// field must keep the stored value instead of collapsing it to 0 - otherwise merely
+// opening the tab, or adding a tier, would silently zero every percentage.
+function readTermNumber(id, fallback) {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  const v = parseFloat(el.value);
+  return Number.isFinite(v) ? v : fallback;
+}
+
 // Reads the Cut-off/Storno/Zahlungsbedingungen fields from the DOM into CONFIG.groupTerms
-// and persists them, without any UI feedback. Used both by the manual save button and
-// automatically before generating a PDF, so generating always uses whatever is currently
-// typed in those fields without requiring a separate save step first.
-function persistGroupTerms() {
-  const cutoffEl = document.getElementById('gterm-cutoffdays');
-  if (cutoffEl) CONFIG.groupTerms.cutOffDays = parseInt(cutoffEl.value) || 0;
+// (in memory only). Safe to call when the panel has not been rendered yet: every field
+// falls back to the value already stored in CONFIG.
+function readGroupTermsFromDom() {
+  if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
+
+  CONFIG.groupTerms.cutOffDays = Math.round(readTermNumber('gterm-cutoffdays', CONFIG.groupTerms.cutOffDays));
 
   CONFIG.groupTerms.reductionTiers = CONFIG.groupTerms.reductionTiers.map((r, i) => ({
     labelDe: document.getElementById('rt-labelDe-' + i)?.value ?? r.labelDe,
     labelEn: document.getElementById('rt-labelEn-' + i)?.value ?? r.labelEn,
-    pct: parseFloat(document.getElementById('rt-pct-' + i)?.value) || 0
+    pct: readTermNumber('rt-pct-' + i, r.pct)
   }));
 
   CONFIG.groupTerms.cancellationTiers = CONFIG.groupTerms.cancellationTiers.map((r, i) => ({
     labelDe: document.getElementById('ct-labelDe-' + i)?.value ?? r.labelDe,
     labelEn: document.getElementById('ct-labelEn-' + i)?.value ?? r.labelEn,
-    pct: parseFloat(document.getElementById('ct-pct-' + i)?.value) || 0,
+    pct: readTermNumber('ct-pct-' + i, r.pct),
     noteDe: document.getElementById('ct-noteDe-' + i)?.value ?? r.noteDe,
     noteEn: document.getElementById('ct-noteEn-' + i)?.value ?? r.noteEn
   }));
 
   CONFIG.groupTerms.paymentPlan = CONFIG.groupTerms.paymentPlan.map((p, i) => ({
-    pct: parseFloat(document.getElementById('pp-pct-' + i)?.value) || 0,
+    pct: readTermNumber('pp-pct-' + i, p.pct),
     timingDe: document.getElementById('pp-timingDe-' + i)?.value ?? p.timingDe,
     timingEn: document.getElementById('pp-timingEn-' + i)?.value ?? p.timingEn
   }));
+}
 
+// Reads the fields and persists them, without any UI feedback. Used both by the manual
+// save button and automatically before generating a PDF, so generating always uses
+// whatever is currently typed in those fields without requiring a separate save first.
+function persistGroupTerms() {
+  readGroupTermsFromDom();
   localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
 }
 
 function saveGroupTerms() {
   persistGroupTerms();
+  renderGroupTermsSettings();
   const ok = document.getElementById('gtermsavok');
   ok.style.display = 'flex';
   setTimeout(() => { ok.style.display = 'none'; }, 2500);
@@ -1318,7 +1561,9 @@ function saveSettings() {
   setTimeout(() => { ok.style.display = 'none'; }, 2500);
 
   renderRoomPanels();
-  renderExtrasChecklist();
+  // Keep whatever is ticked in the Create tab, but let the (possibly just edited)
+  // configured prices through.
+  renderExtrasChecklist({ keepSelection: true });
 }
 
 // A Group Offer is a list of "Offer N" blocks; each block can bundle several
@@ -1592,154 +1837,161 @@ ${blocksHtml}
   triggerPrintWhenReady(printWin);
 }
 
-function copyOut() {
-  const letter = document.getElementById('letterOut');
-  if (!letter.innerHTML) return;
+// Builds the mail body as Outlook-safe HTML: nested tables, inline styles on every
+// cell, web-safe fonts, no flexbox/grid and no external CSS - Outlook's Word renderer
+// ignores anything else. Driven by the offer data, not by the preview DOM.
+function buildOutlookHtml(o) {
+  const t = (de, en) => lang === 'de' ? de : en;
+  const FONT = "font-family:'Segoe UI',Arial,Helvetica,sans-serif";
+  const cell = 'padding:7pt 8pt;border-bottom:1px solid #EEEEEE';
 
-  const salEl = letter.querySelector('.lsal');
-  const introEl = letter.querySelector('.lint');
-  const validEl = letter.querySelector('.vnote span');
-  const ctaEl = letter.querySelector('.lcta');
-  // Exclude the NRF hint from the generic outro loop below - it's rendered separately so its
-  // text isn't duplicated (it also computes its own bold/highlighted formatting).
-  const outroEls = Array.from(letter.querySelectorAll('.lout')).filter(el => !el.hasAttribute('data-nrf-hint'));
-  const roomCards = Array.from(letter.querySelectorAll('.oc'));
-  const nrfHint = computeNrfHint();
+  const rowHtml = r => {
+    const strike = r.kind === 'strike';
+    const color = strike ? '#AAAAAA' : r.kind === 'discount' ? '#2D7D46' : '#1A1A1A';
+    const deco = strike ? ';text-decoration:line-through' : '';
+    const weight = r.kind === 'strong' ? ';font-weight:700' : '';
+    return `<tr>
+      <td style="${cell};${FONT};font-size:10pt;color:${color}${deco}${weight}">${r.label}</td>
+      <td style="${cell};${FONT};font-size:9pt;color:#888888${deco}">${r.detail}</td>
+      <td align="right" style="${cell};${FONT};font-size:10pt;color:${color};white-space:nowrap${deco}${weight}">${r.amount}</td>
+    </tr>`;
+  };
 
-  function isLineThrough(row) {
-    return Array.from(row.querySelectorAll('td')).some(td => (td.getAttribute('style') || '').includes('line-through'));
-  }
-
-  function buildOutlookRoomTable(oc) {
-    const titleEl = oc.querySelector('.oct');
-    const subEl = oc.querySelector('.ocs');
-    const badge = titleEl ? titleEl.querySelector('.rbdg') : null;
-    const titleTxt = titleEl ? titleEl.innerText.replace(badge ? badge.innerText : '', '').trim() : '';
-    const badgeTxt = badge ? badge.innerText.trim() : '';
-    const subTxt = subEl ? subEl.innerText : '';
-    const stornoEl = oc.querySelector('.storno');
-    const stornoTxt = stornoEl ? stornoEl.innerText.replace(/^Storno:/, '').trim() : '';
-    const rows = Array.from(oc.querySelectorAll('tbody tr'));
-
-    let rowsHtml = '';
-    rows.forEach(row => {
-      const tds = row.querySelectorAll('td');
-      if (!tds.length) return;
-      const isTotal = row.classList.contains('trtot') || row.classList.contains('trgrand');
-
-      if (isTotal) {
-        rowsHtml += `<tr>
-          <td colspan="2" style="border-top:1.5pt solid #AAAAAA;padding:9pt 8pt 5pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[0] ? tds[0].innerText : ''}</b></font></td>
-          <td align="right" style="border-top:1.5pt solid #AAAAAA;padding:9pt 8pt 5pt;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[tds.length - 1] ? tds[tds.length - 1].innerText : ''}</b></font></td>
-        </tr>`;
-      } else {
-        const isDiscount = row.querySelector('td[style*="2D7D46"]');
-        const isStrike = isLineThrough(row);
-        const color = isDiscount ? '#2D7D46' : isStrike ? '#AAAAAA' : '#1a1a1a';
-        const pos = tds[0] ? tds[0].innerText : '';
-        const det = tds[1] ? tds[1].innerText : '';
-        const amt = tds[tds.length - 1] ? tds[tds.length - 1].innerText : '';
-        const posHtml = isStrike ? `<s>${pos}</s>` : pos;
-        const amtHtml = isStrike ? `<s>${amt}</s>` : amt;
-        rowsHtml += `<tr>
-          <td style="border-bottom:1pt solid #EEEEEE;padding:7pt 8pt"><font face="Arial Nova,Arial" size="2" color="${color}">${posHtml}</font></td>
-          <td style="border-bottom:1pt solid #EEEEEE;padding:7pt 8pt"><font face="Arial Nova,Arial" size="1" color="#777777">${det}</font></td>
-          <td align="right" style="border-bottom:1pt solid #EEEEEE;padding:7pt 8pt;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="${color}">${amtHtml}</font></td>
-        </tr>`;
-      }
-    });
-
-    return `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F8F8F8" style="border:1pt solid #E0E0E0;margin-bottom:0">
-  <tr><td style="padding:14pt 16pt">
-    <font face="Arial Nova,Arial" color="#1a1a1a"><b><font size="3">${titleTxt}</font></b>${badgeTxt ? ` <font face="Arial Nova,Arial" size="1" color="#8B6914" style="background-color:#FAF5E8;border:1pt solid #E8D5A0">&nbsp;${badgeTxt}&nbsp;</font>` : ''}
-    </font><br>
-    <font face="Arial Nova,Arial" size="1" color="#777777">${subTxt}</font><br><br>
-    <table width="100%" cellpadding="0" cellspacing="0" border="0">
-      <tr bgcolor="#EFEFEF">
-        <td width="38%" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>POSITION</b></font></td>
-        <td width="37%" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>DETAILS</b></font></td>
-        <td width="25%" align="right" style="padding:5pt 8pt"><font face="Arial Nova,Arial" size="1" color="#999999"><b>BETRAG</b></font></td>
-      </tr>
-      ${rowsHtml}
-    </table>
-    <br>
-    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  const optionHtml = room => `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-bottom:18pt">
+  <tr><td style="padding-bottom:5pt;border-bottom:2px solid #8B6914">
+    ${room.caption ? `<div style="${FONT};font-size:8pt;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8B6914;padding-bottom:3pt">${room.caption}</div>` : ''}
+    <span style="${FONT};font-size:13pt;font-weight:700;color:#1A1A1A">${room.title}</span>
+    <span style="${FONT};font-size:8pt;font-weight:700;color:#8B6914">&nbsp;&nbsp;${room.rate}</span>
+  </td></tr>
+  <tr><td style="padding-top:8pt">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
       <tr>
-        <td width="3" bgcolor="#E8D5A0" style="font-size:1pt;line-height:1pt">&nbsp;</td>
-        <td bgcolor="#FAF5E8" style="padding:7pt 12pt"><font face="Arial Nova,Arial" size="1" color="#666666">${stornoTxt}</font></td>
+        <td width="37%" style="padding:0 8pt 4pt;${FONT};font-size:8pt;font-weight:700;color:#999999;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid #DDDDDD">${t('Position', 'Item')}</td>
+        <td width="38%" style="padding:0 8pt 4pt;${FONT};font-size:8pt;font-weight:700;color:#999999;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid #DDDDDD">Details</td>
+        <td width="25%" align="right" style="padding:0 8pt 4pt;${FONT};font-size:8pt;font-weight:700;color:#999999;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid #DDDDDD">${t('Betrag', 'Amount')}</td>
+      </tr>
+      ${room.rows.map(rowHtml).join('')}
+      <tr>
+        <td colspan="2" style="padding:9pt 8pt 4pt;border-top:2px solid #AAAAAA;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A">${t('Gesamtbetrag', 'Total')}</td>
+        <td align="right" style="padding:9pt 8pt 4pt;border-top:2px solid #AAAAAA;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A;white-space:nowrap">${room.total}</td>
       </tr>
     </table>
   </td></tr>
+  <tr><td style="padding-top:9pt">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td width="3" bgcolor="#E8D5A0" style="font-size:1pt;line-height:1pt">&nbsp;</td>
+      <td style="padding:6pt 10pt;${FONT};font-size:9pt;color:#666666;line-height:1.5"><b>${t('Stornobedingungen:', 'Cancellation terms:')}</b> ${room.storno}${room.pay ? ' ' + room.pay : ''}</td>
+    </tr></table>
+  </td></tr>
 </table>`;
-  }
 
-  const mainCards = roomCards.filter(oc => oc.querySelector('.oct'));
-  const grandCard = roomCards.find(oc => !oc.querySelector('.oct') && oc.querySelector('.trgrand'));
-  const roomTablesHtml = mainCards.map(oc => buildOutlookRoomTable(oc)).join('<br>');
+  const grandHtml = o.grand ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="border-collapse:collapse;margin-bottom:18pt">
+  <tr><td style="padding:12pt 14pt">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+      ${o.grand.rows.map(r => `<tr>
+        <td style="padding:5pt 0;${FONT};font-size:10pt;color:#1A1A1A">${r.label}</td>
+        <td style="padding:5pt 0;${FONT};font-size:9pt;color:#888888">${r.detail}</td>
+        <td align="right" style="padding:5pt 0;${FONT};font-size:10pt;color:#1A1A1A;white-space:nowrap">${r.amount}</td>
+      </tr>`).join('')}
+      <tr>
+        <td colspan="2" style="padding:9pt 0 2pt;border-top:1px solid #8B6914;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A">${o.grand.label}</td>
+        <td align="right" style="padding:9pt 0 2pt;border-top:1px solid #8B6914;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A;white-space:nowrap">${o.grand.total}</td>
+      </tr>
+    </table>
+  </td></tr>
+</table>` : '';
 
-  let grandHtml = '';
-  if (grandCard) {
-    const rows = Array.from(grandCard.querySelectorAll('tbody tr'));
-    let gr = '';
-    rows.forEach(row => {
-      const tds = row.querySelectorAll('td');
-      const isGrand = row.classList.contains('trgrand');
-      if (isGrand) {
-        gr += `<tr><td colspan="2" style="border-top:2pt solid #333333;padding:10pt 8pt 5pt"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[0] ? tds[0].innerText : ''}</b></font></td><td align="right" style="border-top:2pt solid #333333;padding:10pt 8pt 5pt;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${tds[tds.length - 1] ? tds[tds.length - 1].innerText : ''}</b></font></td></tr>`;
-      } else {
-        gr += `<tr><td style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[0] ? tds[0].innerText : ''}</font></td><td style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE"></td><td align="right" style="padding:7pt 8pt;border-bottom:1pt solid #EEEEEE;white-space:nowrap"><font face="Arial Nova,Arial" size="2" color="#1a1a1a">${tds[tds.length - 1] ? tds[tds.length - 1].innerText : ''}</font></td></tr>`;
-      }
-    });
-    grandHtml = `<br><table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="border:1pt solid #E8D5A0"><tr><td style="padding:12pt 16pt"><table width="100%" cellpadding="0" cellspacing="0" border="0">${gr}</table></td></tr></table>`;
-  }
+  const stayRow = (label, value) => `<tr><td style="padding:2pt 14pt 2pt 0;${FONT};font-size:10pt;font-weight:700;color:#1A1A1A">${label}</td><td style="padding:2pt 0;${FONT};font-size:10pt;color:#444444">${value}</td></tr>`;
 
-  const outroHtml = outroEls.map(el => {
-    const isSmall = el.style.fontSize && el.style.fontSize.includes('12');
-    return `<font face="Arial Nova,Arial" size="${isSmall ? 1 : 2}" color="${isSmall ? '#777777' : '#444444'}">${el.innerText}</font><br><br>`;
+  const outroHtml = o.outro.map(p => {
+    const body = p.link ? `${p.text} <a href="https://${p.link}" style="color:#8B6914">${p.link}</a>` : p.text;
+    return `<p style="${FONT};font-size:${p.small ? '9pt' : '10pt'};color:${p.small ? '#888888' : '#444444'};line-height:1.6;margin:0 0 10pt">${body}</p>`;
   }).join('');
 
-  const html = `<html><head><meta charset="UTF-8"></head><body style="margin:0;padding:16pt;font-family:'Arial Nova',Arial,sans-serif;font-size:10pt;color:#1a1a1a">
-<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td>
+  return `<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:16pt;background:#FFFFFF;${FONT};font-size:10pt;color:#1A1A1A">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px"><tr><td>
 
-<font face="Arial Nova,Arial" size="2" color="#1a1a1a">${salEl ? salEl.innerText : ''}</font><br><br>
+<p style="${FONT};font-size:11pt;color:#1A1A1A;margin:0 0 12pt">${o.salLine}</p>
+<p style="${FONT};font-size:10pt;color:#444444;line-height:1.6;margin:0 0 16pt">${o.intro}</p>
 
-<font face="Arial Nova,Arial" size="2" color="#444444">${introEl ? introEl.innerText : ''}</font><br><br><br>
+<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20pt">
+  ${stayRow(t('Anreise', 'Arrival'), o.arrivalFull)}
+  ${stayRow(t('Abreise', 'Departure'), o.departureFull)}
+  ${stayRow(t('Dauer', 'Duration'), `${o.nights} ${t('Nächte', 'nights')}`)}
+  ${o.guestInfo ? stayRow(t('Gäste', 'Guests'), o.guestInfo) : ''}
+</table>
 
-${roomTablesHtml}
+${o.rooms.map(optionHtml).join('')}
 ${grandHtml}
 
-<br><br>
-
-<table width="100%" cellpadding="12" cellspacing="0" border="0" bgcolor="#EBF2FB" style="border:1pt solid #C3D9F0">
-  <tr><td><font face="Arial Nova,Arial" size="2" color="#1A56A0">${validEl ? validEl.innerText : ''}</font></td></tr>
-</table>
-
-<br>
-
-<table width="100%" cellpadding="12" cellspacing="0" border="0" bgcolor="#FAF5E8" style="border:1pt solid #E8D5A0">
-  <tr><td><font face="Arial Nova,Arial" size="2" color="#8B6914"><b>${ctaEl ? ctaEl.innerText.replace(/^[^\wÀ-ž]/, '').trim() : ''}</b></font></td></tr>
-</table>
-
-<br><br>
+<p style="${FONT};font-size:10pt;color:#444444;line-height:1.6;margin:0 0 12pt">${o.valid}</p>
+<p style="${FONT};font-size:10.5pt;font-weight:700;color:#8B6914;line-height:1.5;margin:0 0 18pt">${o.cta}</p>
 
 ${outroHtml}
+${o.nrfHint ? `<p style="${FONT};font-size:10pt;color:#1A1A1A;line-height:1.6;margin:0 0 12pt">${o.nrfHint}</p>` : ''}
 
-${nrfHint ? `<font face="Arial Nova,Arial" size="2" color="#1a1a1a"><b>${nrfHint}</b></font><br><br>` : ''}
+<p style="${FONT};font-size:10pt;color:#444444;margin:18pt 0 4pt">${o.greet}</p>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10pt;border-top:1px solid #DDDDDD;padding-top:10pt">
+  <tr><td style="padding-top:10pt;${FONT};font-size:10pt;font-weight:700;color:#1A1A1A">${COMPANY.name}</td></tr>
+  <tr><td style="${FONT};font-size:9pt;color:#666666;line-height:1.7">
+    ${t(COMPANY.team.de, COMPANY.team.en)}<br>
+    ${COMPANY.street}, ${COMPANY.city}<br>
+    ${COMPANY.phone} &nbsp;|&nbsp; <a href="mailto:${COMPANY.mail}" style="color:#8B6914">${COMPANY.mail}</a><br>
+    <a href="https://${COMPANY.web}" style="color:#8B6914">${COMPANY.web}</a>
+  </td></tr>
+</table>
 
 </td></tr></table>
 </body></html>`;
+}
 
-  const htmlBlob = new Blob([html], { type: 'text/html' });
-  const textBlob = new Blob([letter.innerText], { type: 'text/plain' });
+// Plain-text fallback for mail clients that reject HTML from the clipboard.
+function buildOfferPlainText(o) {
+  const t = (de, en) => lang === 'de' ? de : en;
+  const lines = [o.salLine, '', o.intro, '',
+    `${t('Anreise', 'Arrival')}: ${o.arrivalFull}`,
+    `${t('Abreise', 'Departure')}: ${o.departureFull}`,
+    `${t('Dauer', 'Duration')}: ${o.nights} ${t('Nächte', 'nights')}`,
+    ...(o.guestInfo ? [`${t('Gäste', 'Guests')}: ${o.guestInfo}`] : []), ''];
 
-  navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]).then(() => {
-    document.getElementById('clbl').textContent = 'Kopiert!';
-    setTimeout(() => { document.getElementById('clbl').textContent = 'Für Outlook kopieren'; }, 2500);
-  }).catch(() => {
-    navigator.clipboard.writeText(letter.innerText).then(() => {
-      document.getElementById('clbl').textContent = 'Kopiert (Text)';
-      setTimeout(() => { document.getElementById('clbl').textContent = 'Für Outlook kopieren'; }, 2500);
-    });
+  o.rooms.forEach(room => {
+    lines.push(`${room.caption ? room.caption + ' – ' : ''}${room.title}  [${room.rate}]`);
+    room.rows.forEach(r => lines.push(`  ${r.label}${r.detail ? ' (' + r.detail + ')' : ''}: ${r.amount}`));
+    lines.push(`  ${t('Gesamtbetrag', 'Total')}: ${room.total}`);
+    lines.push(`  ${t('Storno', 'Cancellation')}: ${room.storno}${room.pay ? ' ' + room.pay : ''}`, '');
+  });
+
+  if (o.grand) {
+    o.grand.rows.forEach(r => lines.push(`${r.label}: ${r.amount}`));
+    lines.push(`${o.grand.label}: ${o.grand.total}`, '');
+  }
+
+  lines.push(o.valid, '', o.cta, '');
+  o.outro.forEach(p => lines.push(p.link ? `${p.text} ${p.link}` : p.text, ''));
+  if (o.nrfHint) lines.push(o.nrfHint.replace(/<[^>]+>/g, ''), '');
+  lines.push(o.greet, '', COMPANY.name, t(COMPANY.team.de, COMPANY.team.en),
+    `${COMPANY.street}, ${COMPANY.city}`, `${COMPANY.phone} | ${COMPANY.mail}`, COMPANY.web);
+  return lines.join('\n');
+}
+
+function copyOut() {
+  if (!lastOffer) return;
+
+  const label = document.getElementById('clbl');
+  const done = suffix => {
+    label.textContent = lang === 'de' ? 'Kopiert!' + suffix : 'Copied!' + suffix;
+    setTimeout(() => { label.textContent = lang === 'de' ? 'Für Outlook kopieren' : 'Copy for Outlook'; }, 2500);
+  };
+
+  const html = buildOutlookHtml(lastOffer);
+  const text = buildOfferPlainText(lastOffer);
+
+  navigator.clipboard.write([new ClipboardItem({
+    'text/html': new Blob([html], { type: 'text/html' }),
+    'text/plain': new Blob([text], { type: 'text/plain' })
+  })]).then(() => done('')).catch(() => {
+    navigator.clipboard.writeText(text).then(() => done(lang === 'de' ? ' (Text)' : ' (text)'));
   });
 }
 
@@ -1755,146 +2007,123 @@ function triggerPrintWhenReady(win) {
 }
 
 function mkPDF() {
-  const letter = document.getElementById('letterOut');
-  if (!letter.innerHTML) { alert('Bitte zuerst eine Offerte generieren.'); return; }
+  if (!lastOffer) { alert(lang === 'de' ? 'Bitte zuerst eine Offerte generieren.' : 'Please generate an offer first.'); return; }
 
-  const nr = String(offerNumber).padStart(3, '0');
-  const guest = document.getElementById('gname').value.trim() || 'Gast';
-  const today = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const nrfHint = computeNrfHint();
+  const o = lastOffer;
+  const t = (de, en) => lang === 'de' ? de : en;
 
-  const salEl = letter.querySelector('.lsal');
-  const introEl = letter.querySelector('.lint');
-  const validEl = letter.querySelector('.vnote span');
-  const ctaEl = letter.querySelector('.lcta');
-  const outroEls = Array.from(letter.querySelectorAll('.lout')).filter(el => !el.hasAttribute('data-nrf-hint'));
-  const roomCards = Array.from(letter.querySelectorAll('.oc'));
+  const rowHtml = r => {
+    const cls = r.kind === 'strike' ? ' class="row-strike"' : r.kind === 'discount' ? ' class="row-discount"' : '';
+    const label = r.kind === 'strong' ? `<strong>${r.label}</strong>` : r.label;
+    const amount = r.kind === 'strong' ? `<strong>${r.amount}</strong>` : r.amount;
+    return `<tr${cls}><td>${label}</td><td class="det">${r.detail}</td><td class="amt">${amount}</td></tr>`;
+  };
 
-  const mainCards = roomCards.filter(oc => oc.querySelector('.oct'));
-  const grandCard = roomCards.find(oc => !oc.querySelector('.oct') && oc.querySelector('.trgrand'));
+  const optionsHtml = o.rooms.map(room => `<div class="option">
+  <div class="option-head">
+    <div>${room.caption ? `<div class="option-cap">${room.caption}</div>` : ''}<span class="option-title">${room.title}</span></div>
+    <span class="rate-badge">${room.rate}</span>
+  </div>
+  <table class="items">
+    <thead><tr><th style="width:37%">${t('Position', 'Item')}</th><th style="width:38%">Details</th><th class="amt" style="width:25%">${t('Betrag', 'Amount')}</th></tr></thead>
+    <tbody>${room.rows.map(rowHtml).join('')}
+    <tr class="row-total"><td colspan="2">${t('Gesamtbetrag', 'Total')}</td><td class="amt">${room.total}</td></tr></tbody>
+  </table>
+  <div class="storno"><strong>${t('Stornobedingungen:', 'Cancellation terms:')}</strong> ${room.storno}${room.pay ? ' ' + room.pay : ''}</div>
+</div>`).join('');
 
-  function isLineThrough(row) {
-    return Array.from(row.querySelectorAll('td')).some(td => (td.getAttribute('style') || '').includes('line-through'));
-  }
+  const grandHtml = o.grand ? `<table class="items grand">
+  <tbody>${o.grand.rows.map(r => `<tr><td>${r.label}</td><td class="det">${r.detail}</td><td class="amt">${r.amount}</td></tr>`).join('')}
+  <tr class="row-grand"><td colspan="2">${o.grand.label}</td><td class="amt">${o.grand.total}</td></tr></tbody>
+</table>` : '';
 
-  function buildPdfRoomCard(oc) {
-    const titleEl = oc.querySelector('.oct');
-    const subEl = oc.querySelector('.ocs');
-    const badge = titleEl ? titleEl.querySelector('.rbdg') : null;
-    const titleTxt = titleEl ? titleEl.innerText.replace(badge ? badge.innerText : '', '').trim() : '';
-    const badgeTxt = badge ? badge.innerText.trim() : '';
-    const subTxt = subEl ? subEl.innerText : '';
-    const stornoEl = oc.querySelector('.storno');
-    const stornoTxt = stornoEl ? stornoEl.innerText.replace(/^Storno:/, '').trim() : '';
-    const rows = Array.from(oc.querySelectorAll('tbody tr'));
-
-    let rowsHtml = '';
-    rows.forEach(row => {
-      const tds = row.querySelectorAll('td');
-      if (!tds.length) return;
-      const isTot = row.classList.contains('trtot');
-      const isGrand = row.classList.contains('trgrand');
-      const isDiscount = row.querySelector('td[style*="2D7D46"]');
-      const isStrike = isLineThrough(row);
-
-      if (isTot || isGrand) {
-        rowsHtml += `<tr class="${isTot ? 'tr-tot' : 'tr-grand'}"><td colspan="2"><strong>${tds[0] ? tds[0].innerText : ''}</strong></td><td class="amt"><strong>${tds[tds.length - 1] ? tds[tds.length - 1].innerText : ''}</strong></td></tr>`;
-      } else {
-        const color = isDiscount ? 'color:#2D7D46' : isStrike ? 'color:#AAAAAA' : '';
-        const posHtml = isStrike ? `<s>${tds[0] ? tds[0].innerText : ''}</s>` : (tds[0] ? tds[0].innerText : '');
-        const amtHtml = isStrike ? `<s>${tds[tds.length - 1] ? tds[tds.length - 1].innerText : ''}</s>` : (tds[tds.length - 1] ? tds[tds.length - 1].innerText : '');
-        rowsHtml += `<tr><td style="${color}">${posHtml}</td><td class="det">${tds[1] ? tds[1].innerText : ''}</td><td class="amt" style="${color}">${amtHtml}</td></tr>`;
-      }
-    });
-
-    return `<div class="room-card">
-      <div class="room-header"><span class="room-title">${titleTxt}</span>${badgeTxt ? `<span class="rate-badge">${badgeTxt}</span>` : ''}</div>
-      <div class="room-sub">${subTxt}</div>
-      <table><thead><tr><th style="width:38%">Position</th><th style="width:37%">Details</th><th class="amt" style="width:25%">Betrag</th></tr></thead>
-      <tbody>${rowsHtml}</tbody></table>
-      <div class="storno-box">${stornoTxt}</div>
-    </div>`;
-  }
-
-  let grandHtml = '';
-  if (grandCard) {
-    const rows = Array.from(grandCard.querySelectorAll('tbody tr'));
-    let gr = '';
-    rows.forEach(row => {
-      const tds = row.querySelectorAll('td');
-      const isGrand = row.classList.contains('trgrand');
-      gr += isGrand
-        ? `<tr class="tr-grand"><td colspan="2"><strong>${tds[0] ? tds[0].innerText : ''}</strong></td><td class="amt"><strong>${tds[tds.length - 1] ? tds[tds.length - 1].innerText : ''}</strong></td></tr>`
-        : `<tr><td>${tds[0] ? tds[0].innerText : ''}</td><td></td><td class="amt">${tds[tds.length - 1] ? tds[tds.length - 1].innerText : ''}</td></tr>`;
-    });
-    grandHtml = `<div class="grand-box"><table><tbody>${gr}</tbody></table></div>`;
-  }
-
-  const outroHtml = outroEls.map(el => {
-    const isSmall = el.style.fontSize && el.style.fontSize.includes('12');
-    return `<p class="${isSmall ? 'small-text' : 'body-text'}">${el.innerText}</p>`;
+  const outroHtml = o.outro.map(p => {
+    const body = p.link ? `${p.text} <a href="https://${p.link}">${p.link}</a>` : p.text;
+    return `<p class="${p.small ? 'small-text' : 'body-text'}">${body}</p>`;
   }).join('');
 
-  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
-<title>Offerte_AAA_${nr}_${guest.replace(/\s+/g, '_')}</title>
+  const html = `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8">
+<title>Offerte_AAA_${o.nr}_${o.guest.replace(/\s+/g, '_')}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 14mm 18mm}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:0.4pt solid #ddd}
-.logo{font-size:13pt;font-weight:700}.sub{font-size:7.5pt;color:#8B6914;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:1.5mm}
-.meta{text-align:right;font-size:7.5pt;color:#666;line-height:1.7}
-.salutation{font-size:11pt;margin-bottom:4mm}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8mm}
+.sender{font-size:7.5pt;color:#666;line-height:1.7}
+.wordmark{font-size:15pt;font-weight:800;letter-spacing:.05em;text-align:right;line-height:1.3;white-space:nowrap}
+.wordmark span{display:block;font-size:8pt;font-weight:500;letter-spacing:.18em;color:#444}
+.meta{display:flex;justify-content:space-between;align-items:baseline;font-size:9pt;color:#444;margin-bottom:7mm}
+.doc-title{font-size:16pt;font-weight:700;margin-bottom:5mm}
+.salutation{font-size:11pt;margin-bottom:3.5mm}
 .intro{font-size:9pt;color:#444;line-height:1.7;margin-bottom:6mm}
-.room-card{background:#f9f9f9;border:0.4pt solid #ddd;padding:4mm 5mm;margin-bottom:4mm}
-.room-header{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm}
-.room-title{font-size:11pt;font-weight:700}
-.rate-badge{font-size:7pt;font-weight:700;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:0.8mm 2mm;border-radius:2mm}
-.room-sub{font-size:8pt;color:#777;margin-bottom:3mm}
-table{width:100%;border-collapse:collapse;font-size:9pt}
-thead tr{background:#f0f0f0}
-th{text-align:left;font-size:7.5pt;font-weight:700;color:#888;padding:2mm;border-bottom:0.4pt solid #ddd;text-transform:uppercase;letter-spacing:.04em}
-td{padding:2.2mm 2mm;border-bottom:0.3pt solid #eee;vertical-align:middle}
-td.det{color:#666;font-size:8.5pt}td.amt{text-align:right}
-tr.tr-tot td{font-weight:700;font-size:10.5pt;border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.5mm}
-tr.tr-grand td{font-weight:700;font-size:11pt;border-top:1.5pt solid #333;border-bottom:none;padding-top:2.5mm}
-.storno-box{margin-top:3mm;border-left:2pt solid #E8D5A0;background:#FAF5E8;padding:2mm 3mm;font-size:8pt;color:#555;line-height:1.6}
-.grand-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:3mm 5mm;margin-bottom:4mm}
-.valid-box{background:#EBF2FB;border:0.4pt solid #C3D9F0;padding:2.5mm 4mm;font-size:8.5pt;color:#1A56A0;margin-bottom:3mm}
-.cta-box{background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:2.5mm 4mm;font-size:9pt;font-weight:700;color:#8B6914;margin-bottom:5mm}
+.stay{border-collapse:collapse;margin-bottom:7mm}
+.stay td{padding:1mm 6mm 1mm 0;font-size:9pt;color:#444}
+.stay td:first-child{font-weight:700;color:#1a1a1a}
+.option{margin-bottom:6mm;page-break-inside:avoid}
+.option-head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:1.5mm;border-bottom:1pt solid #8B6914;margin-bottom:2.5mm}
+.option-cap{font-size:7.5pt;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8B6914;margin-bottom:0.8mm}
+.option-title{font-size:12pt;font-weight:700}
+.rate-badge{font-size:7.5pt;font-weight:700;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:0.8mm 2.2mm;white-space:nowrap}
+.items{width:100%;border-collapse:collapse;font-size:9pt}
+.items th{text-align:left;font-size:7.5pt;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;padding:0 2mm 1.5mm;border-bottom:0.4pt solid #ddd}
+.items td{padding:1.9mm 2mm;border-bottom:0.3pt solid #eee;vertical-align:top}
+.items td.det{color:#777;font-size:8.5pt}
+.items td.amt,.items th.amt{text-align:right;white-space:nowrap}
+.row-strike td{color:#aaa;text-decoration:line-through}
+.row-discount td{color:#2D7D46}
+.row-total td{font-weight:700;font-size:10.5pt;border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.4mm}
+.grand{margin-bottom:6mm;background:#FAF5E8}
+.grand td{border-bottom:0.3pt solid #EDE0BE}
+.row-grand td{font-weight:700;font-size:11pt;border-top:1pt solid #8B6914;border-bottom:none;padding-top:2.4mm}
+.storno{margin-top:2.5mm;border-left:1.5pt solid #E8D5A0;padding:1.5mm 3mm;font-size:8pt;color:#666;line-height:1.6}
+.notice{font-size:9pt;color:#444;line-height:1.7;margin-bottom:2.5mm}
+.cta{font-size:9.5pt;font-weight:700;color:#8B6914;margin:4mm 0 5mm}
 .body-text{font-size:9pt;color:#444;line-height:1.7;margin-bottom:2.5mm}
 .small-text{font-size:8pt;color:#777;line-height:1.6;margin-bottom:2.5mm}
-.nrf-hint{font-size:9pt;font-weight:700;color:#1a1a1a;margin-bottom:2.5mm}
-.footer{margin-top:6mm;padding-top:3mm;border-top:0.4pt solid #ddd;display:flex;justify-content:space-between;font-size:8pt;color:#666;line-height:1.7}
-.footer-name{font-size:9.5pt;font-weight:700;color:#1a1a1a;margin-bottom:0.5mm}
-@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 14mm 18mm;size:A4}}
+.nrf-hint{font-size:9pt;color:#1a1a1a;line-height:1.7;margin-bottom:2.5mm}
+.sign{margin-top:6mm;font-size:9pt;color:#444;line-height:1.7}
+.sign-name{font-weight:700;color:#1a1a1a;margin-top:2mm}
+.footer{margin-top:9mm;padding-top:2.5mm;border-top:0.4pt solid #ddd;display:flex;justify-content:space-between;font-size:7.5pt;color:#666;line-height:1.7}
+a{color:#8B6914}
+@media print{body{padding:0}@page{margin:18mm;size:A4}}
 </style></head><body>
 <div class="header">
-  <div><div class="logo">Andermatt Alpine Apartments</div><div class="sub">Reservations · Offerte Tool</div></div>
-  <div class="meta">Offerte Nr. ${nr}<br>Datum: ${today}<br>Gültig: 24 Std.</div>
+  <div class="sender">${COMPANY.name}<br>${COMPANY.street}<br>${COMPANY.city}<br>${t('Tel', 'Phone')}: ${COMPANY.phone} | E-Mail: ${COMPANY.mail}</div>
+  <div class="wordmark">ANDERMATT<span>ALPINE APARTMENTS</span></div>
 </div>
-<div class="salutation">${salEl ? salEl.innerText : ''}</div>
-<div class="intro">${introEl ? introEl.innerText : ''}</div>
-${mainCards.map(oc => buildPdfRoomCard(oc)).join('')}
+<div class="meta"><span>Andermatt, ${formatFullDate(new Date())}</span><span>${t('Offerte Nr.', 'Offer no.')} ${o.nr}</span></div>
+<div class="doc-title">${t('Offerte', 'Offer')}</div>
+<div class="salutation">${o.salLine}</div>
+<div class="intro">${o.intro}</div>
+<table class="stay">
+  <tr><td>${t('Anreise', 'Arrival')}</td><td>${o.arrivalFull}</td></tr>
+  <tr><td>${t('Abreise', 'Departure')}</td><td>${o.departureFull}</td></tr>
+  <tr><td>${t('Dauer', 'Duration')}</td><td>${o.nights} ${t('Nächte', 'nights')}</td></tr>
+  ${o.guestInfo ? `<tr><td>${t('Gäste', 'Guests')}</td><td>${o.guestInfo}</td></tr>` : ''}
+</table>
+${optionsHtml}
 ${grandHtml}
-<div class="valid-box">${validEl ? validEl.innerText : ''}</div>
-<div class="cta-box">${ctaEl ? ctaEl.innerText.replace(/^[^\wÀ-ž]/, '').trim() : ''}</div>
+<div class="notice">${o.valid}</div>
+<div class="cta">${o.cta}</div>
 ${outroHtml}
-${nrfHint ? `<p class="nrf-hint">${nrfHint}</p>` : ''}
+${o.nrfHint ? `<p class="nrf-hint">${o.nrfHint}</p>` : ''}
+<div class="sign">
+  <div>${o.greet}</div>
+  <div class="sign-name">${COMPANY.name}</div>
+  <div>${t(COMPANY.team.de, COMPANY.team.en)}</div>
+</div>
 <div class="footer">
-  <div><div class="footer-name">Andermatt Alpine Apartments</div><div>Reservations Team</div><div>Gütschgasse 6, 6490 Andermatt</div></div>
-  <div style="text-align:right">+41 41 888 78 00<br>info@alpine.apartments<br>alpine.apartments</div>
+  <div>${COMPANY.name}<br>${COMPANY.street}, ${COMPANY.city}</div>
+  <div style="text-align:right">${COMPANY.phone}<br>${COMPANY.mail}<br>${COMPANY.web}</div>
 </div>
 </body></html>`;
 
   const printWin = window.open('', '_blank', 'width=900,height=700');
-  if (!printWin) { alert('Bitte Pop-up-Blocker deaktivieren.'); return; }
+  if (!printWin) { alert(t('Bitte Pop-up-Blocker deaktivieren.', 'Please disable your pop-up blocker.')); return; }
 
   printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
   triggerPrintWhenReady(printWin);
-
-  document.getElementById('plbl').textContent = 'PDF speichern';
 }
 
 buildSalutationOptions('sal');
