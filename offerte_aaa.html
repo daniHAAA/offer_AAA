@@ -255,8 +255,14 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div class="sec"><div class="stit"><i class="ti ti-info-circle"></i>Standardhinweise</div><div id="s-stdinfo"></div></div>
   <div class="sec">
     <div class="stit"><i class="ti ti-photo"></i>E-Mail-Vorlage</div>
-    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Optionales Bild unter der Wortmarke im Mail-Kopf. Muss eine öffentlich erreichbare Adresse sein (z.B. auf der Website) – ein Bild von der Festplatte kann in einer Mail nicht angezeigt werden. Leer lassen = nur Wortmarke.</p>
-    <div class="fld"><label>Bild-URL (optional)</label><input type="text" id="mail-image" placeholder="https://alpine.apartments/bilder/header.jpg"></div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Optionales Bild unter der Wortmarke, in Mail und PDF. Das Bild wird im Tool gespeichert und reist in jeder Offerte mit – es muss nirgends hochgeladen werden. Grosse Bilder werden automatisch auf Bannerbreite verkleinert.</p>
+    <div class="fld" style="margin-bottom:.75rem">
+      <label>Bild wählen</label>
+      <input type="file" id="mail-image-file" accept="image/*" onchange="pickMailImage(this)">
+    </div>
+    <div id="mail-image-preview"></div>
+    <div class="fld" style="margin-top:.75rem"><label>Oder Bild-Adresse (Alternative)</label><input type="text" id="mail-image" placeholder="https://alpine.apartments/bilder/header.jpg"></div>
+    <p style="font-size:11px;color:var(--mu);margin-top:.5rem">Eine Adresse statt einer gespeicherten Datei funktioniert auch, wird aber von manchen Mailprogrammen erst nach dem Klick auf „Bilder herunterladen" angezeigt.</p>
   </div>
   <div class="sec">
     <div class="stit"><i class="ti ti-users"></i>Gruppenofferte Texte (DE / EN)</div>
@@ -745,6 +751,24 @@ function computeRoomPricing(i, nights, discount) {
 let lastOffer = null;
 
 // Shared company details, so letter, PDF and mail signature can't disagree.
+// Banner picture for the mail and the PDF. CONFIG.mailImage holds either a plain URL or
+// the picture itself, stored as data by the picker in Settings. A stored picture is the
+// better of the two: the .eml carries it as a part of the message, so Outlook shows it
+// straight away instead of asking the reader to download pictures, and nothing has to be
+// hosted anywhere.
+const BANNER_CID = 'aaa-banner';
+
+// The picture's own bytes, when one is stored rather than linked.
+function bannerData() {
+  const m = /^data:([^;,]+);base64,(.+)$/.exec(CONFIG.mailImage || '');
+  return m ? { mime: m[1], base64: m[2] } : null;
+}
+
+// What to put in an <img> in an HTML context (print window, preview).
+function bannerSource() {
+  return CONFIG.mailImage || '';
+}
+
 const COMPANY = {
   name: 'Andermatt Alpine Apartments',
   team: { de: 'Reservations Team', en: 'Reservations Team' },
@@ -1255,7 +1279,10 @@ function renderSettingsPanel() {
   document.getElementById('s-greet').innerHTML = CONFIG.greets.map((g, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--br)"><input type="text" id="gde-${i}" value="${g.de}" placeholder="DE"><input type="text" id="gen-${i}" value="${g.en}" placeholder="EN">${CONFIG.greets.length > 1 ? `<button class="bsm bdng" onclick="removeGreet(${i})"><i class="ti ti-trash"></i></button>` : '<div></div>'}</div>`).join('');
 
   const mailImageInput = document.getElementById('mail-image');
-  if (mailImageInput) mailImageInput.value = CONFIG.mailImage || '';
+  // A stored picture is data, not something to show in a text field - the field only ever
+  // carries a URL, and the preview below shows a stored one.
+  if (mailImageInput) mailImageInput.value = bannerData() ? '' : (CONFIG.mailImage || '');
+  renderMailImagePreview();
 
   document.getElementById('s-stdinfo').innerHTML = [['wlan', 'WLAN'], ['parking', 'Parkplatz'], ['catLink', 'Kategorie-Link']].map(([k, lbl]) => `<div style="margin-bottom:1rem"><div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${lbl}</div><div class="g2"><div class="fld"><label>DE</label><input type="text" id="si-${k}-de" value="${CONFIG.stdinfo[k + 'De'] || ''}"></div><div class="fld"><label>EN</label><input type="text" id="si-${k}-en" value="${CONFIG.stdinfo[k + 'En'] || ''}"></div></div></div>`).join('');
 }
@@ -1419,6 +1446,58 @@ function saveGroupTerms() {
   setTimeout(() => { ok.style.display = 'none'; }, 2500);
 }
 
+// Reads the chosen picture, scales it down to banner width and stores it in the config.
+// Scaling matters twice over: a phone-sized photo would bloat every offer mail, and the
+// browser's storage for the settings is limited to a few megabytes.
+function pickMailImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxWidth = 1280;
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      CONFIG.mailImage = canvas.toDataURL('image/jpeg', 0.78);
+      localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
+      input.value = '';
+      const urlField = document.getElementById('mail-image');
+      if (urlField) urlField.value = '';
+      renderMailImagePreview();
+    };
+    img.onerror = () => alert(lang === 'de' ? 'Diese Datei konnte nicht als Bild gelesen werden.' : 'This file could not be read as an image.');
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeMailImage() {
+  CONFIG.mailImage = '';
+  localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
+  renderMailImagePreview();
+}
+
+function renderMailImagePreview() {
+  const c = document.getElementById('mail-image-preview');
+  if (!c) return;
+  const stored = bannerData();
+  if (!CONFIG.mailImage) { c.innerHTML = ''; return; }
+  const sizeKb = stored ? Math.round(stored.base64.length * 0.75 / 1024) : 0;
+  c.innerHTML = `<div style="border:1px solid var(--br);border-radius:var(--rsm);padding:8px">
+    <img src="${CONFIG.mailImage}" style="display:block;width:100%;border-radius:calc(var(--rsm) - 2px)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <span style="font-size:11px;color:var(--mu)">${stored ? `Im Tool gespeichert · ${sizeKb} KB` : 'Von einer Adresse geladen'}</span>
+      <button class="bsm bdng" onclick="removeMailImage()"><i class="ti ti-trash"></i>Entfernen</button>
+    </div>
+  </div>`;
+}
+
 function renderDiscountSettingsPanel() {
   const c = document.getElementById('s-discounts');
   if (!c) return;
@@ -1560,7 +1639,10 @@ function saveSettings() {
   });
 
   const mailImageInput = document.getElementById('mail-image');
-  if (mailImageInput) CONFIG.mailImage = mailImageInput.value.trim();
+  // Typing a URL replaces a stored picture; leaving the field empty keeps whatever is
+  // stored rather than silently deleting it.
+  if (mailImageInput && mailImageInput.value.trim()) CONFIG.mailImage = mailImageInput.value.trim();
+  else if (mailImageInput && !bannerData()) CONFIG.mailImage = '';
 
   if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
   GROUP_TEXT_FIELDS.forEach(([key]) => {
@@ -1816,7 +1898,7 @@ tr{page-break-inside:avoid;break-inside:avoid}
       <div class="band-sup">Andermatt</div>
       <div class="band-name">Alpine Apartments</div>
     </div>
-    ${CONFIG.mailImage ? `<img class="banner" src="${CONFIG.mailImage}" alt="">` : ''}
+    ${bannerSource() ? `<img class="banner" src="${bannerSource()}" alt="">` : ''}
   </div>
   <div class="content">
 <div class="meta"><span>${t('Gruppenofferte', 'Group Offer')}</span><span>${dateLine}</span></div>
@@ -1976,8 +2058,11 @@ function buildOutlookHtml(o) {
     return para(body, p.small ? 8.5 : 10, p.small ? MUTED : '#4A443C', 12);
   }).join('');
 
-  const banner = CONFIG.mailImage
-    ? `<tr><td><img src="${CONFIG.mailImage}" width="${WIDTH}" alt="Andermatt Alpine Apartments" style="display:block;width:${WIDTH}px;border:0" /></td></tr>`
+  // An embedded picture is referenced by its content id so it rides along inside the
+  // message; a configured URL is used as-is and stays subject to the reader's image blocking.
+  const bannerSrc = bannerData() ? `cid:${BANNER_CID}` : CONFIG.mailImage;
+  const banner = bannerSrc
+    ? `<tr><td><img src="${bannerSrc}" width="${WIDTH}" alt="Andermatt Alpine Apartments" style="display:block;width:${WIDTH}px;border:0" /></td></tr>`
     : '';
 
   return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
@@ -2113,14 +2198,11 @@ function mkEml() {
   const t = (de, en) => lang === 'de' ? de : en;
   const CRLF = '\r\n';
   const ALT = '----=_AAA_ALT_' + o.nr;
+  const REL = '----=_AAA_REL_' + o.nr;
   const subject = t(`Ihre Offerte – ${COMPANY.name}`, `Your offer – ${COMPANY.name}`);
 
-  const eml = [
-    'Subject: =?UTF-8?B?' + toBase64(subject, false) + '?=',
-    'X-Unsent: 1',
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/alternative; boundary="${ALT}"`,
-    '',
+  // The two readable versions of the body. A mail reader picks whichever it can show.
+  const alternative = [
     `--${ALT}`,
     'Content-Type: text/plain; charset="utf-8"',
     'Content-Transfer-Encoding: base64',
@@ -2133,9 +2215,45 @@ function mkEml() {
     '',
     toBase64(buildOutlookHtml(o), true),
     '',
-    `--${ALT}--`,
+    `--${ALT}--`
+  ];
+
+  // With an embedded banner the body and the picture are wrapped in a "related" part, the
+  // structure that tells a mail reader the image belongs to the text rather than being an
+  // attachment to open. Without one the alternative is the whole message.
+  const headers = [
+    'Subject: =?UTF-8?B?' + toBase64(subject, false) + '?=',
+    'X-Unsent: 1',
+    'MIME-Version: 1.0'
+  ];
+
+  const embedded = bannerData();
+  const eml = (embedded ? [
+    ...headers,
+    `Content-Type: multipart/related; type="multipart/alternative"; boundary="${REL}"`,
+    '',
+    `--${REL}`,
+    `Content-Type: multipart/alternative; boundary="${ALT}"`,
+    '',
+    ...alternative,
+    '',
+    `--${REL}`,
+    `Content-Type: ${embedded.mime}; name="banner"`,
+    'Content-Transfer-Encoding: base64',
+    `Content-ID: <${BANNER_CID}>`,
+    'Content-Disposition: inline; filename="banner.jpg"',
+    '',
+    embedded.base64.replace(/(.{76})/g, '$1\r\n'),
+    '',
+    `--${REL}--`,
     ''
-  ].join(CRLF);
+  ] : [
+    ...headers,
+    `Content-Type: multipart/alternative; boundary="${ALT}"`,
+    '',
+    ...alternative,
+    ''
+  ]).join(CRLF);
 
   // Chromium drops the whole download name when it carries non-ASCII characters, and the
   // file then arrives as "download" without the .eml ending - which Windows will not open
@@ -2283,7 +2401,7 @@ a{color:#8B6914}
       <div class="band-sup">Andermatt</div>
       <div class="band-name">Alpine Apartments</div>
     </div>
-    ${CONFIG.mailImage ? `<img class="banner" src="${CONFIG.mailImage}" alt="">` : ''}
+    ${bannerSource() ? `<img class="banner" src="${bannerSource()}" alt="">` : ''}
   </div>
   <div class="content">
     <div class="meta"><span>${t('Offerte', 'Offer')}</span><span>${t('Nr.', 'No.')} ${o.nr} &nbsp;·&nbsp; ${o.today}</span></div>
