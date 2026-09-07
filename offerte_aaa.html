@@ -613,7 +613,16 @@ function setRoomRate(i, rateId) {
 
 function setPriceMode(i, m) { rooms[i].priceMode = m; rooms[i].priceVal = ''; renderRoomPanels(); }
 function selectRoom(i) { activeRoomIndex = i; renderRoomTabs(); renderRoomPanels(); }
-function addRoom() { if (rooms.length < 5) { rooms.push(createRoom()); activeRoomIndex = rooms.length - 1; renderRoomTabs(); renderRoomPanels(); } }
+function addRoom() {
+  if (rooms.length >= 5) return;
+  rooms.push(createRoom());
+  activeRoomIndex = rooms.length - 1;
+  // A room added after the dates were picked must get the same automatic rate as the
+  // others - it used to keep the plain BAR fallback while room 1 already showed EXT.
+  applyDefaultRateCodes();
+  renderRoomTabs();
+  renderRoomPanels();
+}
 function removeRoom(i) { rooms.splice(i, 1); if (activeRoomIndex >= rooms.length) activeRoomIndex = rooms.length - 1; renderRoomTabs(); renderRoomPanels(); }
 
 // Rebuilds the extras checklist. A plain re-render would drop everything the user has
@@ -780,11 +789,18 @@ function gen() {
   const greetCfg = CONFIG.greets[0] || { de: 'Mit freundlichen Grüssen', en: 'Kind regards' };
   const greet = lang === 'de' ? greetCfg.de : greetCfg.en;
 
+  // In a Vergleichsofferte the cards are alternatives for the same stay, so the extras
+  // belong on every option - otherwise option 1 looks more expensive than the rest and
+  // the comparison is meaningless. In a Multi-Booking the apartments are booked
+  // together, so the extras are charged once, on the first card.
+  const extrasOnEveryRoom = mode === 'compare';
+  const roomHasExtras = i => extrasOnEveryRoom || i === 0;
+  const roomTotals = roomData.map((r, i) => r.tot + (roomHasExtras(i) ? extrasTotal : 0));
+
   let cards = '';
   roomData.forEach((r, i) => {
     const storno = getStornoText(r.rc, r.season, r.customStorno);
     const pay = r.customStorno ? '' : (lang === 'de' ? r.rc.payDe : r.rc.payEn);
-    const isFirstRoom = i === 0;
     let rows = '';
 
     if (r.discount && r.discAmt > 0) {
@@ -797,20 +813,20 @@ function gen() {
 
     rows += `<tr><td>${lang === 'de' ? 'Endreinigung' : 'End cleaning'}</td><td class="muc">${SIZE_LABELS[r.size]}</td><td class="amt">${formatCurrency(r.cl)}</td></tr>`;
 
-    if (isFirstRoom) {
+    if (roomHasExtras(i)) {
       extras.forEach(e => {
         rows += `<tr><td>${e.label}</td><td class="muc">${e.detail}</td><td class="amt">${e.amt > 0 ? formatCurrency(e.amt) : (lang === 'de' ? 'Kostenlos' : 'Complimentary')}</td></tr>`;
       });
     }
 
-    const roomTotal = r.tot + (isFirstRoom ? extrasTotal : 0);
+    const roomTotal = roomTotals[i];
     cards += `<div class="oc"><div class="oct">${r.fullCat} <span class="rbdg">${r.rate}</span></div><div class="ocs">${formatDate(arrivalDate)} – ${formatDate(departureDate)} · ${nights} ${lang === 'de' ? 'Nächte' : 'nights'}${guestInfo ? ' · ' + guestInfo : ''}</div><table class="pt"><thead><tr><th style="width:34%">${lang === 'de' ? 'Position' : 'Item'}</th><th style="width:38%">Details</th><th class="amt" style="width:28%">${lang === 'de' ? 'Betrag' : 'Amount'}</th></tr></thead><tbody>${rows}<tr class="trtot"><td colspan="2"><strong>${lang === 'de' ? 'Gesamtbetrag' : 'Total'}</strong></td><td class="amt"><strong>${formatCurrency(roomTotal)}</strong></td></tr></tbody></table><div class="storno"><strong>${lang === 'de' ? 'Storno:' : 'Cancellation:'}</strong> ${storno}${pay ? ' ' + pay : ''}</div></div>`;
   });
 
   let grand = '';
   if (mode === 'multi' && rooms.length > 1) {
-    const grandTotal = roomData.reduce((s, r) => s + r.tot, 0) + extrasTotal;
-    grand = `<div class="oc" style="border-color:var(--gb);background:var(--gp)"><table class="pt"><tbody>${roomData.map((r, i) => `<tr><td>${r.fullCat}</td><td class="muc">${i === 0 && extrasTotal > 0 ? (lang === 'de' ? 'inkl. Extras' : 'incl. extras') : ''}</td><td class="amt">${formatCurrency(r.tot + (i === 0 ? extrasTotal : 0))}</td></tr>`).join('')}<tr class="trgrand"><td colspan="2"><strong>${lang === 'de' ? 'Gesamtbetrag alle Apartments' : 'Grand total all apartments'}</strong></td><td class="amt"><strong>${formatCurrency(grandTotal)}</strong></td></tr></tbody></table></div>`;
+    const grandTotal = roomTotals.reduce((s, t) => s + t, 0);
+    grand = `<div class="oc" style="border-color:var(--gb);background:var(--gp)"><table class="pt"><tbody>${roomData.map((r, i) => `<tr><td>${r.fullCat}</td><td class="muc">${roomHasExtras(i) && extrasTotal > 0 ? (lang === 'de' ? 'inkl. Extras' : 'incl. extras') : ''}</td><td class="amt">${formatCurrency(roomTotals[i])}</td></tr>`).join('')}<tr class="trgrand"><td colspan="2"><strong>${lang === 'de' ? 'Gesamtbetrag alle Apartments' : 'Grand total all apartments'}</strong></td><td class="amt"><strong>${formatCurrency(grandTotal)}</strong></td></tr></tbody></table></div>`;
   }
 
   const nrfHint = computeNrfHint();
@@ -821,7 +837,7 @@ function gen() {
   document.getElementById('prevWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const note = document.getElementById('inote').value.trim();
-  const totalAll = roomData.reduce((s, r) => s + r.tot, 0) + extrasTotal;
+  const totalAll = roomTotals.reduce((s, t) => s + t, 0);
   const journalLines = [
     `─────────────────────────────`,
     `Offerte Nr. ${nr}  ·  ${today}`,
@@ -834,8 +850,8 @@ function gen() {
       `Zimmer ${i + 1}: ${r.fullCat}  [${r.rate}]`,
       `  Preis/Nacht:   ${formatCurrency(r.pn)}`,
       `  Endreinigung:  ${formatCurrency(r.cl)}`,
-      ...(i === 0 && extras.length > 0 ? extras.map(e => `  ${e.label}: ${e.amt > 0 ? formatCurrency(e.amt) : 'Kostenlos'}`) : []),
-      `  Zimmer Total:  ${formatCurrency(r.tot + (i === 0 ? extrasTotal : 0))}`
+      ...(roomHasExtras(i) ? extras.map(e => `  ${e.label}: ${e.amt > 0 ? formatCurrency(e.amt) : 'Kostenlos'}`) : []),
+      `  Zimmer Total:  ${formatCurrency(roomTotals[i])}`
     ].join('\n')),
     ``,
     `Gesamtbetrag: ${formatCurrency(totalAll)}`,
