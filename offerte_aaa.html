@@ -175,6 +175,7 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div id="prevWrap" style="display:none">
     <div class="letter" id="letterOut"></div>
     <div class="brow">
+      <button class="bact" onclick="mkEml()"><i class="ti ti-mail-forward"></i><span id="elbl">Als Outlook-Mail öffnen</span></button>
       <button class="bact" onclick="copyOut()"><i class="ti ti-copy"></i><span id="clbl">Für Outlook kopieren</span></button>
       <button class="bact bpdf" onclick="mkPDF()"><i class="ti ti-file-type-pdf"></i><span id="plbl">PDF speichern</span></button>
       <button class="bact brst" onclick="resetForm()"><i class="ti ti-refresh"></i>Zurücksetzen</button>
@@ -1764,45 +1765,57 @@ function genGroupOffer() {
 <title>Group_Offer_${contactName.replace(/\s+/g, '_')}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm 18mm 24mm 18mm}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm}
-.sender-block{font-size:7.5pt;color:#666;line-height:1.7}
-.wordmark{font-size:15pt;font-weight:800;letter-spacing:.05em;text-align:right;line-height:1.3;white-space:nowrap}
-.wordmark span{display:block;font-size:8pt;font-weight:500;letter-spacing:.18em;color:#444}
-.date-line{font-size:9pt;color:#1a1a1a;margin-bottom:6mm}
-.group-title{font-size:16pt;font-weight:700;margin-bottom:5mm}
-.salutation{font-size:11pt;margin-bottom:4mm}
-.intro p{font-size:9pt;color:#444;line-height:1.7;margin-bottom:3mm}
-.stay-details{border-collapse:collapse;margin-bottom:6mm}
-.stay-details td{padding:1mm 4mm 1mm 0;font-size:9pt}
-.stay-details td:first-child{font-weight:700}
-.offer-block{margin-bottom:5mm}
-.offer-block-title{font-size:11pt;font-weight:700;padding-bottom:1.5mm;border-bottom:1pt solid #8B6914;margin-bottom:2mm}
-.offer-table{width:100%;border-collapse:collapse;font-size:9pt;border:0.4pt solid #ccc}
-.offer-table td{padding:1.8mm 2mm;border:0.4pt solid #eee}
-.offer-table td:first-child{font-weight:700;color:#444;width:45%}
-.offer-row-total td{border-top:0.8pt solid #aaa;font-size:10pt}
-.offer-block-total{margin-top:3mm;border:0.4pt solid #E8D5A0}
-.offer-block-total td{padding:2.5mm 2mm;background:#FAF5E8;border:none;font-size:10.5pt}
-.offer-block-total td:first-child{color:#8B6914}
-.footer-note{font-size:8pt;color:#777;margin:4mm 0;font-style:italic}
+body{font-family:'Arial Nova',Arial,Helvetica,sans-serif;font-size:10pt;color:#1F1B16;background:#fff}
+.sheet{padding:0 0 6mm}
+@media screen{.sheet{max-width:210mm;margin:0 auto 6mm;box-shadow:0 0 0 1px #E7E3DC}}
+.masthead{margin:0 0 9mm}
+.band{background:#3B332C;color:#fff;text-align:center;padding:12mm 14mm}
+.band-sup{font-size:8.5pt;letter-spacing:.28em;text-transform:uppercase;color:#D9CDB8;margin-bottom:2mm}
+.band-name{font-size:19pt;line-height:1.2}
+.banner{display:block;width:100%}
+.content{padding:0 14mm}
+.meta{display:flex;justify-content:space-between;align-items:baseline;font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#8B6914;margin-bottom:5mm}
+.meta span:last-child{color:#7A736A;letter-spacing:.06em}
+.salutation{font-size:13pt;margin-bottom:4mm}
+.intro p{font-size:10pt;color:#4A443C;line-height:1.65;margin-bottom:3mm}
+.stay-details{border-collapse:collapse;margin:6mm 0 8mm}
+.stay-details td{padding:1.1mm 7mm 1.1mm 0;font-size:10pt;color:#4A443C}
+.stay-details td:first-child{font-weight:bold;color:#1F1B16}
+.offer-block{margin-bottom:7mm;page-break-inside:avoid;break-inside:avoid}
+.offer-block table{page-break-inside:avoid;break-inside:avoid}
+tr{page-break-inside:avoid;break-inside:avoid}
+.offer-block-title{font-size:7.5pt;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8B6914;padding-bottom:2mm;border-bottom:0.5pt solid #C8AF77;margin-bottom:3.5mm}
+.offer-table{width:100%;border-collapse:collapse;font-size:9.5pt}
+.offer-table td{padding:2mm 1.6mm;border-bottom:0.3pt solid #EFEBE4}
+.offer-table td:first-child{color:#7A736A;width:45%}
+.offer-table td:last-child{text-align:right;white-space:nowrap}
+.offer-row-total td{font-size:11pt;font-weight:bold;color:#1F1B16;border-top:0.6pt solid #BEB6AA;border-bottom:none;padding-top:2.6mm}
+.offer-block-total{margin-top:3mm;background:#FAF5E8}
+.offer-block-total td{padding:3mm 2mm;border:none;font-size:11.5pt}
+.offer-block-total td:first-child{color:#8B6914;font-weight:bold}
+.footer-note{font-size:8.5pt;color:#7A736A;margin:5mm 0;font-style:italic}
 .page2{padding-top:4mm}
-.page2-title{font-size:13pt;font-weight:700;margin-bottom:4mm}
-.section-title{font-size:9.5pt;font-weight:700;color:#8B6914;margin:4mm 0 1.5mm}
-.subsection-title{font-size:9pt;font-weight:700;margin:3mm 0 1mm;text-decoration:underline}
-.body-text{font-size:9pt;color:#444;line-height:1.6;margin-bottom:1mm}
-.body-text a{color:#1A56A0}
-.company-footer{margin-top:8mm;font-size:7.5pt;color:#666;border-top:0.4pt solid #ddd;padding-top:2mm;line-height:1.6}
-.closing{margin-top:6mm}
-.closing p{font-size:9pt;color:#444;line-height:1.6;margin-bottom:2mm}
-@media print{body{padding:0;margin:0}@page{margin:18mm 18mm 18mm 18mm;size:A4}}
+.page2-title{font-size:14pt;margin-bottom:4mm}
+.section-title{font-size:7.5pt;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8B6914;margin:6mm 0 2mm}
+.subsection-title{font-size:10pt;font-weight:bold;margin:4mm 0 1.5mm}
+.body-text{font-size:9.5pt;color:#4A443C;line-height:1.6;margin-bottom:1.5mm}
+.body-text a{color:#8B6914}
+.company-footer{margin:9mm 14mm 0;padding-top:3mm;border-top:0.4pt solid #E7E3DC;text-align:center;font-size:8pt;color:#7A736A}
+.closing{margin-top:7mm}
+.closing p{font-size:10pt;color:#4A443C;line-height:1.65;margin-bottom:2mm}
+@page{margin:15mm 0;size:A4}
+@page :first{margin-top:0}
 </style></head><body>
-<div class="header">
-  <div class="sender-block">Andermatt Alpine Apartments<br>Gütschgasse 6<br>CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
-  <div class="wordmark">ANDERMATT<span>ALPINE APARTMENTS</span></div>
-</div>
-<div class="date-line">${dateLine}</div>
-<div class="group-title">${t('Gruppenofferte', 'Group Offer')}</div>
+<div class="sheet">
+  <div class="masthead">
+    <div class="band">
+      <div class="band-sup">Andermatt</div>
+      <div class="band-name">Alpine Apartments</div>
+    </div>
+    ${CONFIG.mailImage ? `<img class="banner" src="${CONFIG.mailImage}" alt="">` : ''}
+  </div>
+  <div class="content">
+<div class="meta"><span>${t('Gruppenofferte', 'Group Offer')}</span><span>${dateLine}</span></div>
 <div class="salutation">${salLine}</div>
 <div class="intro">${renderTextBlock(introText)}</div>
 <table class="stay-details">
@@ -1841,7 +1854,9 @@ ${blocksHtml}
     <p>${t(gt.closingTeamDe, gt.closingTeamEn)}</p>
   </div>
 </div>
-<div class="company-footer">Andermatt Alpine Apartments<br>Gütschgasse 6<br>CH-6490 Andermatt<br>Tel: +41 41 888 78 00 | E-Mail: stay@alpine.apartments</div>
+  </div>
+  <div class="company-footer">${COMPANY.name} &middot; ${COMPANY.street}, ${COMPANY.city} &middot; ${COMPANY.phone} &middot; ${COMPANY.mail}</div>
+</div>
 </body></html>`;
 
   const printWin = window.open('', '_blank', 'width=900,height=700');
@@ -2065,6 +2080,80 @@ function copyOut() {
   })]).then(() => done('')).catch(() => {
     navigator.clipboard.writeText(text).then(() => done(lang === 'de' ? ' (Text)' : ' (text)'));
   });
+}
+
+// base64 for a MIME part: UTF-8 first, then chunked so a long body cannot blow the
+// argument limit of String.fromCharCode, then wrapped at the 76 characters MIME expects.
+function toBase64(str, wrap) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  const b64 = btoa(bin);
+  return wrap ? b64.replace(/(.{76})/g, '$1\r\n') : b64;
+}
+
+// Writes the offer as a complete mail file and hands it to the browser as a download.
+// Opening it in Outlook Classic gives an unsent message with the offer already laid out:
+// Word only rewrites what is pasted into a compose window, not what is already the
+// message body, so the formatting survives. X-Unsent is what makes Outlook treat the
+// file as a draft rather than a received message, and leaving out To: keeps the
+// recipient field empty and ready to type in.
+function mkEml() {
+  if (!lastOffer) return;
+
+  const o = lastOffer;
+  const t = (de, en) => lang === 'de' ? de : en;
+  const CRLF = '\r\n';
+  const ALT = '----=_AAA_ALT_' + o.nr;
+  const subject = t(`Ihre Offerte – ${COMPANY.name}`, `Your offer – ${COMPANY.name}`);
+
+  const eml = [
+    'Subject: =?UTF-8?B?' + toBase64(subject, false) + '?=',
+    'X-Unsent: 1',
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${ALT}"`,
+    '',
+    `--${ALT}`,
+    'Content-Type: text/plain; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    toBase64(buildOfferPlainText(o), true),
+    '',
+    `--${ALT}`,
+    'Content-Type: text/html; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    toBase64(buildOutlookHtml(o), true),
+    '',
+    `--${ALT}--`,
+    ''
+  ].join(CRLF);
+
+  // Chromium drops the whole download name when it carries non-ASCII characters, and the
+  // file then arrives as "download" without the .eml ending - which Windows will not open
+  // in Outlook. Guest names like Müller or Grässli would have hit this constantly, so the
+  // name is transliterated down to plain ASCII.
+  const asciiName = (o.guest || 'Gast')
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+    .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'Gast';
+
+  const url = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Offerte_AAA_${o.nr}_${asciiName}.eml`;
+  document.body.appendChild(link);
+  link.click();
+  // The link has to outlive the click: tearing it down in the same tick can cost the
+  // download its file name, and a name without the .eml ending would not open in Outlook.
+  setTimeout(() => { link.remove(); URL.revokeObjectURL(url); }, 10000);
+
+  const label = document.getElementById('elbl');
+  label.textContent = t('Datei erstellt – doppelklicken', 'File created – double-click it');
+  setTimeout(() => { label.textContent = t('Als Outlook-Mail öffnen', 'Open as Outlook mail'); }, 4000);
 }
 
 function triggerPrintWhenReady(win) {
