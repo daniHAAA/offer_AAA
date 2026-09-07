@@ -2127,15 +2127,17 @@ body{font-family:'Arial Nova',Arial,Helvetica,sans-serif;font-size:10pt;color:#1
    the masthead's negative margins would hang off the top. Giving the screen view the
    same frame keeps preview and print identical. */
 .sheet{padding:0 0 6mm}
-@media screen{.sheet{padding:15mm 14mm 6mm;max-width:210mm;margin:0 auto;box-shadow:0 0 0 1px #E7E3DC}}
-/* Negative margins matching @page pull the masthead out to the paper edge on sheet one,
-   while @page keeps its margins for every following sheet. */
-.masthead{margin:-15mm -14mm 9mm}
+@media screen{.sheet{max-width:210mm;margin:0 auto 6mm;box-shadow:0 0 0 1px #E7E3DC}}
+/* The masthead needs no offset of its own: the horizontal page margin is zero, and
+   @page :first drops the top margin, so it simply starts at the paper edge. Pulling it
+   out with negative margins does not work - Chrome clips whatever leaves the page box
+   instead of printing it. */
+.masthead{margin:0 0 9mm}
 .band{background:#3B332C;color:#fff;text-align:center;padding:12mm 14mm}
 .band-sup{font-size:8.5pt;letter-spacing:.28em;text-transform:uppercase;color:#D9CDB8;margin-bottom:2mm}
 .band-name{font-size:19pt;line-height:1.2}
 .banner{display:block;width:100%}
-.content{padding:0}
+.content{padding:0 14mm}
 .meta{display:flex;justify-content:space-between;align-items:baseline;font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#8B6914;margin-bottom:5mm}
 .meta span:last-child{color:#7A736A;letter-spacing:.06em}
 .salutation{font-size:13pt;margin-bottom:4mm}
@@ -2171,12 +2173,14 @@ tr{page-break-inside:avoid;break-inside:avoid}
 .nrf-hint{font-size:10pt;color:#1F1B16;line-height:1.65;margin-bottom:3mm}
 .sign{margin-top:7mm;font-size:10pt;color:#4A443C;line-height:1.7}
 .sign-name{font-weight:bold;color:#1F1B16;margin-top:2.5mm}
-.footer{margin:9mm 0 0;padding-top:3mm;border-top:0.4pt solid #E7E3DC;text-align:center;font-size:8pt;color:#7A736A}
+.footer{margin:9mm 14mm 0;padding-top:3mm;border-top:0.4pt solid #E7E3DC;text-align:center;font-size:8pt;color:#7A736A}
 a{color:#8B6914}
-/* Margins belong on @page so every sheet gets them. Setting them to zero and padding a
-   container instead only indents the first and last page, which left page two glued to
-   the paper edge. */
-@page{margin:15mm 14mm;size:A4}
+/* Vertical margins live on @page so every sheet gets them; the first sheet drops its
+   top margin so the masthead can bleed to the paper edge. Horizontal margins are zero
+   and the inset comes from padding on the content blocks instead - horizontal padding
+   repeats on every fragment of a block, vertical padding would not. */
+@page{margin:15mm 0;size:A4}
+@page :first{margin-top:0}
 </style></head><body>
 <div class="sheet">
   <div class="masthead">
