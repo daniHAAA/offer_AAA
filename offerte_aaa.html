@@ -412,7 +412,7 @@ else Object.keys(DEFAULT_CONFIG.groupTexts).forEach(k => { if (!(k in CONFIG.gro
 if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
 
 function createRoom() {
-  return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', customStorno: false, customStornoText: '' };
+  return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', rateTouched: false, customStorno: false, customStornoText: '' };
 }
 
 function formatCurrency(n) {
@@ -443,7 +443,7 @@ function setLang(l) {
   buildSalutationOptions('sal');
   buildSalutationOptions('grp-sal');
   renderRoomPanels();
-  renderExtrasChecklist();
+  renderExtrasChecklist({ keepSelection: true, keepPrices: true });
   renderGroupBlocks();
   updateDateDisplay();
   syncGroupIntroDefault();
@@ -476,13 +476,32 @@ function goTab(name) {
 const EN_SALUTATIONS = [['ef', 'Dear Ms.'], ['em', 'Dear Mr.'], ['en2', 'Dear Sir or Madam']];
 const DE_SALUTATIONS = [['df', 'Sehr geehrte Frau'], ['dm', 'Sehr geehrter Herr'], ['dn', 'Guten Tag']];
 
+// Both salutation lists hold the same three entries (female / male / neutral) in the
+// same order, so a selection can be carried from one language to the other by index.
+function salutationIndex(code) {
+  const found = DE_SALUTATIONS.concat(EN_SALUTATIONS).findIndex(([v]) => v === code);
+  return found >= 0 ? found % DE_SALUTATIONS.length : 0;
+}
+
 function buildSalutationOptions(elementId = 'sal') {
   const el = document.getElementById(elementId);
   if (!el) return;
   const opts = lang === 'de' ? DE_SALUTATIONS : EN_SALUTATIONS;
+  // Keep the current choice across a language switch - it used to snap back to the
+  // first entry, so a chosen "Herr" silently became "Frau" in the letter.
+  const keep = el.value ? salutationIndex(el.value) : 0;
   el.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-  const match = opts.find(([v]) => v.charAt(0) === (lang === 'de' ? 'd' : 'e'));
-  if (match) el.value = match[0];
+  el.value = opts[keep][0];
+}
+
+// Selects the equivalent of `code` in whichever language is active, so restoring a
+// German salutation while the UI is in English can't leave the select on no option
+// at all (which would make gen() throw when reading the selected label).
+function setSalutationValue(elementId, code) {
+  const el = document.getElementById(elementId);
+  if (!el || !code) return;
+  const opts = lang === 'de' ? DE_SALUTATIONS : EN_SALUTATIONS;
+  el.value = opts[salutationIndex(code)][0];
 }
 
 function buildDiscountDropdown() {
@@ -559,7 +578,7 @@ function renderRoomTabs() {
 
 function renderRoomPanels() {
   const c = document.getElementById('rpanels');
-  c.innerHTML = rooms.map((r, i) => `<div class="rpanel ${i === activeRoomIndex ? 'active' : ''}">${rooms.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="removeRoom(${i})"><i class="ti ti-trash"></i>${lang === 'de' ? 'Entfernen' : 'Remove'}</button></div>` : ''}<div class="fld" style="margin-bottom:12px"><label>${lang === 'de' ? 'Zimmertyp-Code' : 'Room Type Code'}</label><select onchange="setRoomTypeCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(r.size, r.cat))}</select></div><div class="togw"><button class="tbtn ${r.priceMode === 'total' ? 'active' : ''}" onclick="setPriceMode(${i},'total')">${lang === 'de' ? 'Gesamtpreis' : 'Total price'}</button><button class="tbtn ${r.priceMode === 'perNight' ? 'active' : ''}" onclick="setPriceMode(${i},'perNight')">${lang === 'de' ? 'Preis/Nacht' : 'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode === 'total' ? 'Gesamtpreis CHF' : 'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="rooms[${i}].rate=this.value">${CONFIG.rates.map(rt => `<option value="${rt.id}" ${r.rate === rt.id ? 'selected' : ''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Benutzerdefinierte Storno' : 'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRoomPanels()"><option value="auto" ${!r.customStorno ? 'selected' : ''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno ? 'selected' : ''}>Benutzerdefiniert</option></select></div></div>${r.customStorno ? `<div class="fld" style="margin-top:8px"><label>${lang === 'de' ? 'Stornotext' : 'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText || ''}</textarea></div>` : ''}</div>`).join('');
+  c.innerHTML = rooms.map((r, i) => `<div class="rpanel ${i === activeRoomIndex ? 'active' : ''}">${rooms.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="removeRoom(${i})"><i class="ti ti-trash"></i>${lang === 'de' ? 'Entfernen' : 'Remove'}</button></div>` : ''}<div class="fld" style="margin-bottom:12px"><label>${lang === 'de' ? 'Zimmertyp-Code' : 'Room Type Code'}</label><select onchange="setRoomTypeCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(r.size, r.cat))}</select></div><div class="togw"><button class="tbtn ${r.priceMode === 'total' ? 'active' : ''}" onclick="setPriceMode(${i},'total')">${lang === 'de' ? 'Gesamtpreis' : 'Total price'}</button><button class="tbtn ${r.priceMode === 'perNight' ? 'active' : ''}" onclick="setPriceMode(${i},'perNight')">${lang === 'de' ? 'Preis/Nacht' : 'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode === 'total' ? 'Gesamtpreis CHF' : 'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select onchange="setRoomRate(${i},this.value)">${CONFIG.rates.map(rt => `<option value="${rt.id}" ${r.rate === rt.id ? 'selected' : ''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Benutzerdefinierte Storno' : 'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRoomPanels()"><option value="auto" ${!r.customStorno ? 'selected' : ''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno ? 'selected' : ''}>Benutzerdefiniert</option></select></div></div>${r.customStorno ? `<div class="fld" style="margin-top:8px"><label>${lang === 'de' ? 'Stornotext' : 'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText || ''}</textarea></div>` : ''}</div>`).join('');
 }
 
 function setRoomTypeCode(i, code) {
@@ -582,7 +601,14 @@ function applyDefaultRateCodes() {
   const season = getSeasonForDate(arrivalDate);
   const defaultRate = getDefaultRateCodeForStay(nights, season);
   if (!CONFIG.rates.some(rt => rt.id === defaultRate)) return;
-  rooms.forEach(r => { r.rate = defaultRate; });
+  // Only rooms whose rate the user hasn't picked by hand - a deliberate NRF must not be
+  // reset to BAR/EXT just because the dates were adjusted afterwards.
+  rooms.forEach(r => { if (!r.rateTouched) r.rate = defaultRate; });
+}
+
+function setRoomRate(i, rateId) {
+  rooms[i].rate = rateId;
+  rooms[i].rateTouched = true;
 }
 
 function setPriceMode(i, m) { rooms[i].priceMode = m; rooms[i].priceVal = ''; renderRoomPanels(); }
@@ -590,8 +616,26 @@ function selectRoom(i) { activeRoomIndex = i; renderRoomTabs(); renderRoomPanels
 function addRoom() { if (rooms.length < 5) { rooms.push(createRoom()); activeRoomIndex = rooms.length - 1; renderRoomTabs(); renderRoomPanels(); } }
 function removeRoom(i) { rooms.splice(i, 1); if (activeRoomIndex >= rooms.length) activeRoomIndex = rooms.length - 1; renderRoomTabs(); renderRoomPanels(); }
 
-function renderExtrasChecklist() {
+// Rebuilds the extras checklist. A plain re-render would drop everything the user has
+// already ticked, so callers that only refresh the markup (language switch, settings
+// save) ask for the selection to be carried over; a settings save additionally refreshes
+// the prices, since the configured defaults may just have changed.
+function renderExtrasChecklist({ keepSelection = false, keepPrices = false } = {}) {
   const c = document.getElementById('xcreate');
+
+  const prev = {};
+  if (keepSelection) {
+    CONFIG.extras.forEach(ex => {
+      const cb = document.getElementById('x-' + ex.id);
+      if (!cb) return;
+      prev[ex.id] = {
+        checked: cb.checked,
+        qty: document.getElementById('xq-' + ex.id)?.value,
+        price: keepPrices ? document.getElementById('xp-' + ex.id)?.value : undefined
+      };
+    });
+  }
+
   c.innerHTML = CONFIG.extras.map(ex => {
     const label = lang === 'de' ? ex.lDe : ex.lEn;
     const hint = ex.comp ? (lang === 'de' ? 'Kostenlos' : 'Complimentary') : ex.perNight ? `CHF ${ex.price}${lang === 'de' ? '/Nacht' : '/night'}` : `CHF ${ex.price}`;
@@ -600,6 +644,15 @@ function renderExtrasChecklist() {
     const price = !ex.comp ? `<input type="number" id="xp-${ex.id}" value="${ex.price}" style="width:72px" min="0">` : '';
     return `<div class="crow"><input type="checkbox" id="x-${ex.id}"><label for="x-${ex.id}">${label} <span class="ph">(${hint})</span></label>${qty}${price}</div>`;
   }).join('');
+
+  Object.entries(prev).forEach(([id, s]) => {
+    const cb = document.getElementById('x-' + id);
+    if (cb) cb.checked = s.checked;
+    const q = document.getElementById('xq-' + id);
+    if (q && s.qty != null) q.value = s.qty;
+    const p = document.getElementById('xp-' + id);
+    if (p && s.price != null) p.value = s.price;
+  });
 }
 
 function getSelectedExtras(nights) {
@@ -689,7 +742,16 @@ function gen() {
   }
   for (let i = 0; i < rooms.length; i++) {
     if (!(parseFloat(rooms[i].priceVal) > 0)) {
-      err.textContent = `Zimmer ${i + 1}: Preis fehlt.`;
+      err.textContent = lang === 'de' ? `Zimmer ${i + 1}: Preis fehlt.` : `Room ${i + 1}: price is missing.`;
+      err.style.display = 'block';
+      return;
+    }
+    // A total below the cleaning fee would print a negative accommodation line.
+    const cleaningFee = CONFIG.cleaning[rooms[i].size] || 105;
+    if (rooms[i].priceMode === 'total' && parseFloat(rooms[i].priceVal) <= cleaningFee) {
+      err.textContent = lang === 'de'
+        ? `Zimmer ${i + 1}: Gesamtpreis muss über der Endreinigung (${formatCurrency(cleaningFee)}) liegen.`
+        : `Room ${i + 1}: total price must be higher than the cleaning fee (${formatCurrency(cleaningFee)}).`;
       err.style.display = 'block';
       return;
     }
@@ -785,7 +847,24 @@ function gen() {
     rooms: roomData.map(r => r.fullCat).join(' + '),
     total: formatCurrency(totalAll),
     nights, note, mode,
-    journal: journalLines.join('\n')
+    journal: journalLines.join('\n'),
+    // Everything needed to rebuild the form via "Als Vorlage laden"; without this the
+    // button could only restore the guest name and note.
+    template: {
+      arrival: arrivalDate.toISOString(),
+      departure: departureDate.toISOString(),
+      mode, adults, kids,
+      salutation: sal.value,
+      discount: discount ? discount.code : '',
+      rooms: JSON.parse(JSON.stringify(rooms)),
+      extras: CONFIG.extras
+        .filter(ex => document.getElementById('x-' + ex.id)?.checked)
+        .map(ex => ({
+          id: ex.id,
+          qty: document.getElementById('xq-' + ex.id)?.value || '',
+          price: document.getElementById('xp-' + ex.id)?.value || ''
+        }))
+    }
   });
   if (offerHistory.length > 20) offerHistory.pop();
   localStorage.setItem('aaa_h8', JSON.stringify(offerHistory));
@@ -796,6 +875,8 @@ function resetForm() {
   document.getElementById('adults').value = '';
   document.getElementById('kids').value = '';
   document.getElementById('inote').value = '';
+  // A leftover discount would otherwise be applied silently to the next offer.
+  document.getElementById('discountInput').value = '';
   arrivalDate = null;
   departureDate = null;
   calStep = 1;
@@ -905,10 +986,13 @@ function pickDay(e, y, m, d) {
   } else {
     departureDate = dt;
     calStep = 1;
-    updateDateDisplay();
     applyDefaultRateCodes();
     renderRoomPanels();
   }
+  // Refresh the trigger label on every pick, not just once the departure is set -
+  // otherwise choosing a new arrival left the previous complete range on screen while
+  // the offer could no longer be generated ("Bitte Zeitraum wählen").
+  updateDateDisplay();
   renderCalendar();
 }
 
@@ -978,7 +1062,40 @@ function loadFromHistory(i, e) {
   e.stopPropagation();
   const h = offerHistory[i];
   document.getElementById('gname').value = h.guest;
-  if (h.note) document.getElementById('inote').value = h.note;
+  document.getElementById('inote').value = h.note || '';
+
+  // Entries written before the template was stored can only restore name and note.
+  const tpl = h.template;
+  if (tpl) {
+    arrivalDate = tpl.arrival ? new Date(tpl.arrival) : null;
+    departureDate = tpl.departure ? new Date(tpl.departure) : null;
+    calStep = 1;
+    if (arrivalDate) { calYear = arrivalDate.getFullYear(); calMonth = arrivalDate.getMonth(); }
+    updateDateDisplay();
+    renderCalendar();
+
+    rooms = (tpl.rooms || []).map(r => Object.assign(createRoom(), r, { rateTouched: true }));
+    if (!rooms.length) rooms = [createRoom()];
+    activeRoomIndex = 0;
+
+    document.getElementById('adults').value = tpl.adults || '';
+    document.getElementById('kids').value = tpl.kids || '';
+    setSalutationValue('sal', tpl.salutation);
+    document.getElementById('discountInput').value = tpl.discount || '';
+
+    renderExtrasChecklist();
+    (tpl.extras || []).forEach(x => {
+      const cb = document.getElementById('x-' + x.id);
+      if (cb) cb.checked = true;
+      const q = document.getElementById('xq-' + x.id);
+      if (q && x.qty) q.value = x.qty;
+      const p = document.getElementById('xp-' + x.id);
+      if (p && x.price) p.value = x.price;
+    });
+
+    setMode(tpl.mode || 'compare');
+  }
+
   goTab('create');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1343,7 +1460,9 @@ function saveSettings() {
   setTimeout(() => { ok.style.display = 'none'; }, 2500);
 
   renderRoomPanels();
-  renderExtrasChecklist();
+  // Keep whatever is ticked in the Create tab, but let the (possibly just edited)
+  // configured prices through.
+  renderExtrasChecklist({ keepSelection: true });
 }
 
 // A Group Offer is a list of "Offer N" blocks; each block can bundle several
