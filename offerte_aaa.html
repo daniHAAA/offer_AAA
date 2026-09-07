@@ -249,6 +249,11 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div class="sec"><div class="stit"><i class="ti ti-message-circle"></i>Grussformeln</div><div id="s-greet"></div><button class="bsm badd" onclick="addGreet()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Grussformel hinzufügen</button></div>
   <div class="sec"><div class="stit"><i class="ti ti-info-circle"></i>Standardhinweise</div><div id="s-stdinfo"></div></div>
   <div class="sec">
+    <div class="stit"><i class="ti ti-photo"></i>E-Mail-Vorlage</div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Optionales Bild unter der Wortmarke im Mail-Kopf. Muss eine öffentlich erreichbare Adresse sein (z.B. auf der Website) – ein Bild von der Festplatte kann in einer Mail nicht angezeigt werden. Leer lassen = nur Wortmarke.</p>
+    <div class="fld"><label>Bild-URL (optional)</label><input type="text" id="mail-image" placeholder="https://alpine.apartments/bilder/header.jpg"></div>
+  </div>
+  <div class="sec">
     <div class="stit"><i class="ti ti-users"></i>Gruppenofferte Texte (DE / EN)</div>
     <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Diese Texte werden in der Gruppenofferte (PDF) verwendet, je nach gewählter Sprache (DE/EN oben rechts).</p>
     <div id="s-grouptexts"></div>
@@ -347,6 +352,10 @@ const DEFAULT_CONFIG = {
     catLinkDe: 'alpine.apartments/apartments',
     catLinkEn: 'alpine.apartments/en/apartments'
   },
+  // Optional banner shown under the wordmark in the Outlook mail. Must be a publicly
+  // reachable URL - a mail cannot display a picture from your own hard drive. Leave
+  // empty and the mail simply starts with the wordmark band.
+  mailImage: '',
   groupTexts: {
     introDefaultEn: 'Thank you very much for your interest in the Andermatt Alpine Apartments.\nWe are pleased that you are considering staying with us in Andermatt. We are happy to make you the offer below:',
     introDefaultDe: 'Vielen Dank für Ihr Interesse an den Andermatt Alpine Apartments.\nWir freuen uns, dass Sie einen Aufenthalt bei uns in Andermatt in Betracht ziehen. Gerne unterbreiten wir Ihnen nachfolgend unser Angebot:',
@@ -411,6 +420,7 @@ let CONFIG = JSON.parse(localStorage.getItem('aaa_cfg8') || 'null') || JSON.pars
 if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
 else Object.keys(DEFAULT_CONFIG.groupTexts).forEach(k => { if (!(k in CONFIG.groupTexts)) CONFIG.groupTexts[k] = DEFAULT_CONFIG.groupTexts[k]; });
 if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
+if (typeof CONFIG.mailImage !== 'string') CONFIG.mailImage = DEFAULT_CONFIG.mailImage;
 
 function createRoom() {
   return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', rateTouched: false, customStorno: false, customStornoText: '' };
@@ -1239,6 +1249,9 @@ function renderSettingsPanel() {
 
   document.getElementById('s-greet').innerHTML = CONFIG.greets.map((g, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--br)"><input type="text" id="gde-${i}" value="${g.de}" placeholder="DE"><input type="text" id="gen-${i}" value="${g.en}" placeholder="EN">${CONFIG.greets.length > 1 ? `<button class="bsm bdng" onclick="removeGreet(${i})"><i class="ti ti-trash"></i></button>` : '<div></div>'}</div>`).join('');
 
+  const mailImageInput = document.getElementById('mail-image');
+  if (mailImageInput) mailImageInput.value = CONFIG.mailImage || '';
+
   document.getElementById('s-stdinfo').innerHTML = [['wlan', 'WLAN'], ['parking', 'Parkplatz'], ['catLink', 'Kategorie-Link']].map(([k, lbl]) => `<div style="margin-bottom:1rem"><div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${lbl}</div><div class="g2"><div class="fld"><label>DE</label><input type="text" id="si-${k}-de" value="${CONFIG.stdinfo[k + 'De'] || ''}"></div><div class="fld"><label>EN</label><input type="text" id="si-${k}-en" value="${CONFIG.stdinfo[k + 'En'] || ''}"></div></div></div>`).join('');
 }
 
@@ -1540,6 +1553,9 @@ function saveSettings() {
     const en = document.getElementById('si-' + k + '-en');
     if (en) CONFIG.stdinfo[k + 'En'] = en.value;
   });
+
+  const mailImageInput = document.getElementById('mail-image');
+  if (mailImageInput) CONFIG.mailImage = mailImageInput.value.trim();
 
   if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTexts));
   GROUP_TEXT_FIELDS.forEach(([key]) => {
@@ -1848,137 +1864,156 @@ ${blocksHtml}
 // inherit them), and mso-line-height-rule for predictable leading.
 function buildOutlookHtml(o) {
   const t = (de, en) => lang === 'de' ? de : en;
-  const FF = "'Segoe UI',Arial,Helvetica,sans-serif";
+  // Outlook Classic cannot load web fonts, so the serif look has to come from fonts that
+  // are already on the machine. Georgia is the one that matches the house style closest.
+  const SERIF = "Georgia,'Times New Roman',Times,serif";
+  const SANS = "'Segoe UI',Arial,Helvetica,sans-serif";
   const WIDTH = 640;
+  const PAD = 30;
+  const INNER = WIDTH - PAD * 2;
+  const INK = '#1F1B16', MUTED = '#7A736A', GOLD = '#8B6914', BAND = '#3B332C', PAGE = '#EFEEEC';
 
-  // Word needs the font repeated per cell; line-height only sticks with the mso rule.
   const font = (size, color, opts = {}) =>
-    `font-family:${FF};font-size:${size}pt;color:${color};` +
-    `mso-line-height-rule:exactly;line-height:${opts.lh || Math.round(size * 1.5)}pt;` +
+    `font-family:${opts.sans ? SANS : SERIF};font-size:${size}pt;color:${color};` +
+    `mso-line-height-rule:exactly;line-height:${opts.lh || Math.round(size * 1.55)}pt;` +
     (opts.extra || '');
 
-  // Spacing is expressed as padding on the cells that actually hold content. Spacer rows
-  // filled with &nbsp; are avoided entirely: when Outlook sends the message it rewrites
-  // the body into Word HTML and wraps every cell's content in a MsoNormal paragraph, so
-  // such a "1px" filler arrives at other clients (Gmail) as a full-height paragraph and
-  // tears the layout apart.
-
-  // Hairlines are drawn as cell borders, never as a filled row: Word enforces a minimum
-  // height on a row that carries a background, so a "1px" coloured row came out as a
-  // heavy bar. Borders on a td are rendered at the width asked for.
-  const HAIRLINE = { gold: '1px solid #B99A47', soft: '1px solid #E5E5E5', total: '1px solid #BBBBBB', sign: '1px solid #DDDDDD' };
+  const HAIRLINE = { gold: '1px solid #C8AF77', soft: '1px solid #E7E3DC', total: '1px solid #BEB6AA' };
 
   const itemRow = r => {
     const strike = r.kind === 'strike';
-    const color = strike ? '#AAAAAA' : r.kind === 'discount' ? '#2D7D46' : '#1A1A1A';
+    const color = strike ? '#A9A199' : r.kind === 'discount' ? '#2D7D46' : INK;
     const wrap = v => strike ? `<s>${v}</s>` : r.kind === 'strong' ? `<b>${v}</b>` : v;
-    const pad = 'padding:8px 8px;border-bottom:1px solid #EEEEEE';
+    const pad = `padding:8px 6px;border-bottom:${HAIRLINE.soft}`;
     return `<tr>
       <td style="${pad};${font(10, color)}">${wrap(r.label)}</td>
-      <td style="${pad};${font(9, strike ? '#AAAAAA' : '#888888')}">${wrap(r.detail)}</td>
+      <td style="${pad};${font(9, strike ? '#A9A199' : MUTED)}">${wrap(r.detail)}</td>
       <td align="right" style="${pad};${font(10, color, { extra: 'white-space:nowrap;' })}">${wrap(r.amount)}</td>
     </tr>`;
   };
 
   const headCell = (w, align, text) =>
-    `<td width="${w}" align="${align}" style="width:${w}px;padding:0 8px 6px;border-bottom:${HAIRLINE.soft};${font(8, '#999999', { lh: 10 })}"><b>${text}</b></td>`;
+    `<td width="${w}" align="${align}" style="width:${w}px;padding:0 6px 6px;border-bottom:${HAIRLINE.soft};${font(7.5, MUTED, { sans: true, lh: 10, extra: 'letter-spacing:1px;text-transform:uppercase;' })}"><b>${text}</b></td>`;
 
-  const option = room => `<table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
-  ${room.caption ? `<tr><td style="padding:0 0 4px;${font(8, '#8B6914', { lh: 10 })}"><b>${room.caption.toUpperCase()}</b></td></tr>` : ''}
-  <tr><td style="padding:0 0 7px;border-bottom:${HAIRLINE.gold}">
-    <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse"><tr>
-      <td style="${font(16, '#1A1A1A', { lh: 21 })}"><b>${room.title}</b></td>
+  const option = room => `<table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse">
+  ${room.caption ? `<tr><td style="padding:0 0 5px;${font(7.5, GOLD, { sans: true, lh: 10, extra: 'letter-spacing:1.5px;text-transform:uppercase;' })}"><b>${room.caption}</b></td></tr>` : ''}
+  <tr><td style="padding:0 0 8px;border-bottom:${HAIRLINE.gold}">
+    <table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse"><tr>
+      <td style="${font(17, INK, { lh: 22 })}">${room.title}</td>
       <td align="right" style="padding-left:10px">
         <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>
-          <td bgcolor="#FAF5E8" style="padding:4px 9px;border:1px solid #E8D5A0;background-color:#FAF5E8;${font(8.5, '#8B6914', { lh: 11, extra: 'white-space:nowrap;' })}"><b>${room.rate}</b></td>
+          <td bgcolor="#FAF5E8" style="padding:4px 9px;border:1px solid #E8D5A0;background-color:#FAF5E8;${font(8, GOLD, { sans: true, lh: 11, extra: 'letter-spacing:1px;white-space:nowrap;' })}"><b>${room.rate}</b></td>
         </tr></table>
       </td>
     </tr></table>
   </td></tr>
-  <tr><td style="padding:12px 0 0">
-    <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
+  <tr><td style="padding:14px 0 0">
+    <table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse">
       <tr>
-        ${headCell(Math.round(WIDTH * 0.37), 'left', t('Position', 'Item'))}
-        ${headCell(Math.round(WIDTH * 0.38), 'left', 'Details')}
-        ${headCell(Math.round(WIDTH * 0.25), 'right', t('Betrag', 'Amount'))}
+        ${headCell(Math.round(INNER * 0.37), 'left', t('Position', 'Item'))}
+        ${headCell(Math.round(INNER * 0.38), 'left', 'Details')}
+        ${headCell(Math.round(INNER * 0.25), 'right', t('Betrag', 'Amount'))}
       </tr>
       ${room.rows.map(itemRow).join('')}
       <tr>
-        <td colspan="2" style="padding:10px 8px 4px;border-top:${HAIRLINE.total};${font(11, '#1A1A1A', { lh: 15 })}"><b>${t('Gesamtbetrag', 'Total')}</b></td>
-        <td align="right" style="padding:10px 8px 4px;border-top:${HAIRLINE.total};${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${room.total}</b></td>
+        <td colspan="2" style="padding:11px 6px 4px;border-top:${HAIRLINE.total};${font(11.5, INK, { lh: 16 })}"><b>${t('Gesamtbetrag', 'Total')}</b></td>
+        <td align="right" style="padding:11px 6px 4px;border-top:${HAIRLINE.total};${font(11.5, INK, { lh: 16, extra: 'white-space:nowrap;' })}"><b>${room.total}</b></td>
       </tr>
     </table>
   </td></tr>
-  <tr><td style="padding:12px 0 22px">
-    <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
-      <tr>
-        <td style="padding:7px 10px;border-left:3px solid #E8D5A0;${font(9, '#666666', { lh: 14 })}"><b>${t('Stornobedingungen:', 'Cancellation terms:')}</b> ${room.storno}${room.pay ? ' ' + room.pay : ''}</td>
-      </tr>
-    </table>
+  <tr><td style="padding:14px 0 26px">
+    <table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse"><tr>
+      <td style="padding:8px 12px;border-left:3px solid #E8D5A0;${font(8.5, MUTED, { lh: 14 })}"><b>${t('Stornobedingungen:', 'Cancellation terms:')}</b> ${room.storno}${room.pay ? ' ' + room.pay : ''}</td>
+    </tr></table>
   </td></tr>
 </table>`;
 
-  const grand = o.grand ? `<table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="width:${WIDTH}px;border-collapse:collapse;background-color:#FAF5E8">
-  <tr><td style="padding:12px 14px">
-    <table width="${WIDTH - 28}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH - 28}px;border-collapse:collapse">
+  const grand = o.grand ? `<table width="${INNER}" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="width:${INNER}px;border-collapse:collapse;background-color:#FAF5E8">
+  <tr><td style="padding:14px 16px">
+    <table width="${INNER - 32}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER - 32}px;border-collapse:collapse">
       ${o.grand.rows.map(r => `<tr>
-        <td style="padding:5px 0;${font(10, '#1A1A1A')}">${r.label}</td>
-        <td style="padding:5px 0;${font(9, '#888888')}">${r.detail}</td>
-        <td align="right" style="padding:5px 0;${font(10, '#1A1A1A', { extra: 'white-space:nowrap;' })}">${r.amount}</td>
+        <td style="padding:5px 0;${font(10, INK)}">${r.label}</td>
+        <td style="padding:5px 0;${font(9, MUTED)}">${r.detail}</td>
+        <td align="right" style="padding:5px 0;${font(10, INK, { extra: 'white-space:nowrap;' })}">${r.amount}</td>
       </tr>`).join('')}
       <tr>
-        <td colspan="2" style="padding:9px 0 2px;border-top:${HAIRLINE.gold};${font(11, '#1A1A1A', { lh: 15 })}"><b>${o.grand.label}</b></td>
-        <td align="right" style="padding:9px 0 2px;border-top:${HAIRLINE.gold};${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${o.grand.total}</b></td>
+        <td colspan="2" style="padding:10px 0 2px;border-top:${HAIRLINE.gold};${font(11.5, INK, { lh: 16 })}"><b>${o.grand.label}</b></td>
+        <td align="right" style="padding:10px 0 2px;border-top:${HAIRLINE.gold};${font(11.5, INK, { lh: 16, extra: 'white-space:nowrap;' })}"><b>${o.grand.total}</b></td>
       </tr>
     </table>
   </td></tr>
 </table>` : '';
 
   const stayRow = (label, value) => `<tr>
-    <td style="padding:2px 16px 2px 0;${font(10, '#1A1A1A', { lh: 15 })}"><b>${label}</b></td>
-    <td style="padding:2px 0;${font(10, '#444444', { lh: 15 })}">${value}</td>
+    <td style="padding:3px 18px 3px 0;${font(10, INK, { lh: 15 })}"><b>${label}</b></td>
+    <td style="padding:3px 0;${font(10, '#4A443C', { lh: 15 })}">${value}</td>
   </tr>`;
 
-  const para = (text, size, color, padBottom) =>
-    `<tr><td style="padding:0 0 ${padBottom}px;${font(size, color, { lh: Math.round(size * 1.55) })}">${text}</td></tr>`;
+  const para = (text, size, color, padBottom, opts = {}) =>
+    `<tr><td style="padding:0 0 ${padBottom}px;${font(size, color, opts)}">${text}</td></tr>`;
 
   const outro = o.outro.map(p => {
-    const body = p.link ? `${p.text} <a href="https://${p.link}" style="color:#8B6914">${p.link}</a>` : p.text;
-    return para(body, p.small ? 9 : 10, p.small ? '#888888' : '#444444', 12);
+    const body = p.link ? `${p.text} <a href="https://${p.link}" style="color:${GOLD}">${p.link}</a>` : p.text;
+    return para(body, p.small ? 8.5 : 10, p.small ? MUTED : '#4A443C', 12);
   }).join('');
+
+  const banner = CONFIG.mailImage
+    ? `<tr><td><img src="${CONFIG.mailImage}" width="${WIDTH}" alt="Andermatt Alpine Apartments" style="display:block;width:${WIDTH}px;border:0" /></td></tr>`
+    : '';
 
   return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head><meta charset="UTF-8"><meta name="ProgId" content="Word.Document"></head>
-<body style="margin:0;padding:16px;background-color:#FFFFFF">
+<body style="margin:0;padding:0;background-color:${PAGE}">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE}" style="background-color:${PAGE};border-collapse:collapse">
+<tr><td align="center" style="padding:24px 12px">
+
+<table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="width:${WIDTH}px;background-color:#FFFFFF;border-collapse:collapse">
+
+  <tr><td align="center" bgcolor="${BAND}" style="background-color:${BAND};padding:26px 20px">
+    <div style="${font(8.5, '#D9CDB8', { lh: 13, extra: 'letter-spacing:3px;text-transform:uppercase;' })}">Andermatt</div>
+    <div style="${font(19, '#FFFFFF', { lh: 25 })}">Alpine Apartments</div>
+  </td></tr>
+  ${banner}
+
+  <tr><td style="padding:${PAD}px">
+    <table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse">
+
+      ${para(t('Offerte', 'Offer'), 7.5, GOLD, 8, { sans: true, lh: 10, extra: 'letter-spacing:1.5px;text-transform:uppercase;' })}
+      ${para(o.salLine, 12.5, INK, 14, { lh: 17 })}
+      ${para(o.intro, 10, '#4A443C', 20)}
+
+      <tr><td style="padding:0 0 22px">
+        <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+          ${stayRow(t('Anreise', 'Arrival'), o.arrivalFull)}
+          ${stayRow(t('Abreise', 'Departure'), o.departureFull)}
+          ${stayRow(t('Dauer', 'Duration'), `${o.nights} ${t('Nächte', 'nights')}`)}
+          ${o.guestInfo ? stayRow(t('Gäste', 'Guests'), o.guestInfo) : ''}
+        </table>
+      </td></tr>
+
+      <tr><td style="padding:0 0 ${o.grand ? '24px' : '0'}">${o.rooms.map(option).join('')}${grand}</td></tr>
+
+      ${para(o.valid, 10, '#4A443C', 14)}
+      ${para(o.cta, 10.5, GOLD, 22, { lh: 16 })}
+
+      ${outro}
+      ${o.nrfHint ? para(o.nrfHint, 10, INK, 12) : ''}
+
+      ${para(o.greet, 10, '#4A443C', 16)}
+      <tr><td style="padding:16px 0 0;border-top:${HAIRLINE.soft};${font(10.5, INK, { lh: 15 })}"><b>${COMPANY.name}</b></td></tr>
+      <tr><td style="${font(9, MUTED, { lh: 15 })}">${t(COMPANY.team.de, COMPANY.team.en)}</td></tr>
+      <tr><td style="${font(9, MUTED, { lh: 15 })}">${COMPANY.street}, ${COMPANY.city}</td></tr>
+      <tr><td style="${font(9, MUTED, { lh: 15 })}">${COMPANY.phone} &nbsp;|&nbsp; <a href="mailto:${COMPANY.mail}" style="color:${GOLD}">${COMPANY.mail}</a></td></tr>
+
+    </table>
+  </td></tr>
+</table>
+
 <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
+  <tr><td align="center" style="padding:14px 10px 4px;${font(8, MUTED, { lh: 13 })}">${COMPANY.name} &middot; ${COMPANY.city.replace('CH-', '')} &middot; <a href="https://${COMPANY.web}" style="color:${MUTED}">${COMPANY.web}</a></td></tr>
+</table>
 
-${para(o.salLine, 11, '#1A1A1A', 14)}
-${para(o.intro, 10, '#444444', 18)}
-
-<tr><td style="padding:0 0 20px">
-  <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
-    ${stayRow(t('Anreise', 'Arrival'), o.arrivalFull)}
-    ${stayRow(t('Abreise', 'Departure'), o.departureFull)}
-    ${stayRow(t('Dauer', 'Duration'), `${o.nights} ${t('Nächte', 'nights')}`)}
-    ${o.guestInfo ? stayRow(t('Gäste', 'Guests'), o.guestInfo) : ''}
-  </table>
 </td></tr>
-
-<tr><td style="padding:0 0 ${o.grand ? '20px' : '0'}">${o.rooms.map(option).join('')}${grand}</td></tr>
-
-${para(o.valid, 10, '#444444', 14)}
-<tr><td style="padding:0 0 20px;${font(10.5, '#8B6914', { lh: 16 })}"><b>${o.cta}</b></td></tr>
-
-${outro}
-${o.nrfHint ? para(o.nrfHint, 10, '#1A1A1A', 12) : ''}
-
-${para(o.greet, 10, '#444444', 16)}
-<tr><td style="padding:14px 0 2px;border-top:${HAIRLINE.sign};${font(10, '#1A1A1A', { lh: 15 })}"><b>${COMPANY.name}</b></td></tr>
-<tr><td style="${font(9, '#666666', { lh: 15 })}">${t(COMPANY.team.de, COMPANY.team.en)}</td></tr>
-<tr><td style="${font(9, '#666666', { lh: 15 })}">${COMPANY.street}, ${COMPANY.city}</td></tr>
-<tr><td style="${font(9, '#666666', { lh: 15 })}">${COMPANY.phone} &nbsp;|&nbsp; <a href="mailto:${COMPANY.mail}" style="color:#8B6914">${COMPANY.mail}</a></td></tr>
-<tr><td style="${font(9, '#666666', { lh: 15 })}"><a href="https://${COMPANY.web}" style="color:#8B6914">${COMPANY.web}</a></td></tr>
-
 </table>
 </body></html>`;
 }
@@ -2057,8 +2092,9 @@ function mkPDF() {
   };
 
   const optionsHtml = o.rooms.map(room => `<div class="option">
+  ${room.caption ? `<div class="option-cap">${room.caption}</div>` : ''}
   <div class="option-head">
-    <div>${room.caption ? `<div class="option-cap">${room.caption}</div>` : ''}<span class="option-title">${room.title}</span></div>
+    <span class="option-title">${room.title}</span>
     <span class="rate-badge">${room.rate}</span>
   </div>
   <table class="items">
@@ -2083,74 +2119,78 @@ function mkPDF() {
 <title>Offerte_AAA_${o.nr}_${o.guest.replace(/\s+/g, '_')}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:9.5pt;color:#1a1a1a;background:#fff;padding:18mm}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8mm}
-.sender{font-size:7.5pt;color:#666;line-height:1.7}
-.wordmark{font-size:15pt;font-weight:800;letter-spacing:.05em;text-align:right;line-height:1.3;white-space:nowrap}
-.wordmark span{display:block;font-size:8pt;font-weight:500;letter-spacing:.18em;color:#444}
-.meta{display:flex;justify-content:space-between;align-items:baseline;font-size:9pt;color:#444;margin-bottom:7mm}
-.doc-title{font-size:16pt;font-weight:700;margin-bottom:5mm}
-.salutation{font-size:11pt;margin-bottom:3.5mm}
-.intro{font-size:9pt;color:#444;line-height:1.7;margin-bottom:6mm}
-.stay{border-collapse:collapse;margin-bottom:7mm}
-.stay td{padding:1mm 6mm 1mm 0;font-size:9pt;color:#444}
-.stay td:first-child{font-weight:700;color:#1a1a1a}
-.option{margin-bottom:6mm;page-break-inside:avoid}
-.option-head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:1.5mm;border-bottom:1pt solid #8B6914;margin-bottom:2.5mm}
-.option-cap{font-size:7.5pt;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8B6914;margin-bottom:0.8mm}
-.option-title{font-size:12pt;font-weight:700}
-.rate-badge{font-size:7.5pt;font-weight:700;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:0.8mm 2.2mm;white-space:nowrap}
-.items{width:100%;border-collapse:collapse;font-size:9pt}
-.items th{text-align:left;font-size:7.5pt;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;padding:0 2mm 1.5mm;border-bottom:0.4pt solid #ddd}
-.items td{padding:1.9mm 2mm;border-bottom:0.3pt solid #eee;vertical-align:top}
-.items td.det{color:#777;font-size:8.5pt}
+body{font-family:Georgia,'Times New Roman',Times,serif;font-size:10pt;color:#1F1B16;background:#fff}
+.sheet{padding:0 0 6mm}
+.band{background:#3B332C;color:#fff;text-align:center;padding:9mm 10mm}
+.band-sup{font-size:8.5pt;letter-spacing:.28em;text-transform:uppercase;color:#D9CDB8;margin-bottom:2mm}
+.band-name{font-size:19pt;line-height:1.2}
+.banner{display:block;width:100%}
+.content{padding:9mm 14mm 0}
+.meta{display:flex;justify-content:space-between;align-items:baseline;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#8B6914;margin-bottom:5mm}
+.meta span:last-child{color:#7A736A;letter-spacing:.06em}
+.salutation{font-size:13pt;margin-bottom:4mm}
+.intro{font-size:10pt;color:#4A443C;line-height:1.65;margin-bottom:7mm}
+.stay{border-collapse:collapse;margin-bottom:8mm}
+.stay td{padding:1.1mm 7mm 1.1mm 0;font-size:10pt;color:#4A443C}
+.stay td:first-child{font-weight:bold;color:#1F1B16}
+.option{margin-bottom:7mm;page-break-inside:avoid}
+.option-cap{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7.5pt;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8B6914;margin-bottom:1.5mm}
+.option-head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:2mm;border-bottom:0.5pt solid #C8AF77;margin-bottom:3.5mm}
+.option-title{font-size:15pt}
+.rate-badge{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7.5pt;font-weight:700;letter-spacing:.1em;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:1mm 2.4mm;white-space:nowrap}
+.items{width:100%;border-collapse:collapse;font-size:9.5pt}
+.items th{text-align:left;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7pt;font-weight:700;color:#8F887E;text-transform:uppercase;letter-spacing:.12em;padding:0 1.6mm 1.6mm;border-bottom:0.4pt solid #E7E3DC}
+.items td{padding:2mm 1.6mm;border-bottom:0.3pt solid #EFEBE4;vertical-align:top}
+.items td.det{color:#7A736A;font-size:9pt}
 .items td.amt,.items th.amt{text-align:right;white-space:nowrap}
-.row-strike td{color:#aaa;text-decoration:line-through}
+.row-strike td{color:#A9A199;text-decoration:line-through}
 .row-discount td{color:#2D7D46}
-.row-total td{font-weight:700;font-size:10.5pt;border-top:0.8pt solid #aaa;border-bottom:none;padding-top:2.4mm}
-.grand{margin-bottom:6mm;background:#FAF5E8}
+.row-total td{font-size:11pt;border-top:0.6pt solid #BEB6AA;border-bottom:none;padding-top:2.6mm}
+.row-total td:first-child,.row-total td.amt{font-weight:bold}
+.grand{margin-bottom:7mm;background:#FAF5E8}
 .grand td{border-bottom:0.3pt solid #EDE0BE}
-.row-grand td{font-weight:700;font-size:11pt;border-top:1pt solid #8B6914;border-bottom:none;padding-top:2.4mm}
-.storno{margin-top:2.5mm;border-left:1.5pt solid #E8D5A0;padding:1.5mm 3mm;font-size:8pt;color:#666;line-height:1.6}
-.notice{font-size:9pt;color:#444;line-height:1.7;margin-bottom:2.5mm}
-.cta{font-size:9.5pt;font-weight:700;color:#8B6914;margin:4mm 0 5mm}
-.body-text{font-size:9pt;color:#444;line-height:1.7;margin-bottom:2.5mm}
-.small-text{font-size:8pt;color:#777;line-height:1.6;margin-bottom:2.5mm}
-.nrf-hint{font-size:9pt;color:#1a1a1a;line-height:1.7;margin-bottom:2.5mm}
-.sign{margin-top:6mm;font-size:9pt;color:#444;line-height:1.7}
-.sign-name{font-weight:700;color:#1a1a1a;margin-top:2mm}
-.footer{margin-top:9mm;padding-top:2.5mm;border-top:0.4pt solid #ddd;display:flex;justify-content:space-between;font-size:7.5pt;color:#666;line-height:1.7}
+.row-grand td{font-size:11.5pt;font-weight:bold;border-top:0.5pt solid #C8AF77;border-bottom:none;padding-top:2.6mm}
+.storno{margin-top:3mm;border-left:1.2pt solid #E8D5A0;padding:1.8mm 3.5mm;font-size:8.5pt;color:#7A736A;line-height:1.55}
+.body-text{font-size:10pt;color:#4A443C;line-height:1.65;margin-bottom:3mm}
+.small-text{font-size:8.5pt;color:#7A736A;line-height:1.55;margin-bottom:3mm}
+.cta{font-size:10.5pt;color:#8B6914;margin:5mm 0 6mm}
+.nrf-hint{font-size:10pt;color:#1F1B16;line-height:1.65;margin-bottom:3mm}
+.sign{margin-top:7mm;font-size:10pt;color:#4A443C;line-height:1.7}
+.sign-name{font-weight:bold;color:#1F1B16;margin-top:2.5mm}
+.footer{margin:9mm 14mm 0;padding-top:3mm;border-top:0.4pt solid #E7E3DC;text-align:center;font-size:8pt;color:#7A736A}
 a{color:#8B6914}
-@media print{body{padding:0}@page{margin:18mm;size:A4}}
+@page{margin:0;size:A4}
+@media print{.content,.footer{padding-left:14mm;padding-right:14mm}}
 </style></head><body>
-<div class="header">
-  <div class="sender">${COMPANY.name}<br>${COMPANY.street}<br>${COMPANY.city}<br>${t('Tel', 'Phone')}: ${COMPANY.phone} | E-Mail: ${COMPANY.mail}</div>
-  <div class="wordmark">ANDERMATT<span>ALPINE APARTMENTS</span></div>
-</div>
-<div class="meta"><span>Andermatt, ${formatFullDate(new Date())}</span><span>${t('Offerte Nr.', 'Offer no.')} ${o.nr}</span></div>
-<div class="doc-title">${t('Offerte', 'Offer')}</div>
-<div class="salutation">${o.salLine}</div>
-<div class="intro">${o.intro}</div>
-<table class="stay">
-  <tr><td>${t('Anreise', 'Arrival')}</td><td>${o.arrivalFull}</td></tr>
-  <tr><td>${t('Abreise', 'Departure')}</td><td>${o.departureFull}</td></tr>
-  <tr><td>${t('Dauer', 'Duration')}</td><td>${o.nights} ${t('Nächte', 'nights')}</td></tr>
-  ${o.guestInfo ? `<tr><td>${t('Gäste', 'Guests')}</td><td>${o.guestInfo}</td></tr>` : ''}
-</table>
-${optionsHtml}
-${grandHtml}
-<div class="notice">${o.valid}</div>
-<div class="cta">${o.cta}</div>
-${outroHtml}
-${o.nrfHint ? `<p class="nrf-hint">${o.nrfHint}</p>` : ''}
-<div class="sign">
-  <div>${o.greet}</div>
-  <div class="sign-name">${COMPANY.name}</div>
-  <div>${t(COMPANY.team.de, COMPANY.team.en)}</div>
-</div>
-<div class="footer">
-  <div>${COMPANY.name}<br>${COMPANY.street}, ${COMPANY.city}</div>
-  <div style="text-align:right">${COMPANY.phone}<br>${COMPANY.mail}<br>${COMPANY.web}</div>
+<div class="sheet">
+  <div class="band">
+    <div class="band-sup">Andermatt</div>
+    <div class="band-name">Alpine Apartments</div>
+  </div>
+  ${CONFIG.mailImage ? `<img class="banner" src="${CONFIG.mailImage}" alt="">` : ''}
+  <div class="content">
+    <div class="meta"><span>${t('Offerte', 'Offer')}</span><span>${t('Nr.', 'No.')} ${o.nr} &nbsp;·&nbsp; ${o.today}</span></div>
+    <div class="salutation">${o.salLine}</div>
+    <div class="intro">${o.intro}</div>
+    <table class="stay">
+      <tr><td>${t('Anreise', 'Arrival')}</td><td>${o.arrivalFull}</td></tr>
+      <tr><td>${t('Abreise', 'Departure')}</td><td>${o.departureFull}</td></tr>
+      <tr><td>${t('Dauer', 'Duration')}</td><td>${o.nights} ${t('Nächte', 'nights')}</td></tr>
+      ${o.guestInfo ? `<tr><td>${t('Gäste', 'Guests')}</td><td>${o.guestInfo}</td></tr>` : ''}
+    </table>
+    ${optionsHtml}
+    ${grandHtml}
+    <p class="body-text">${o.valid}</p>
+    <p class="cta">${o.cta}</p>
+    ${outroHtml}
+    ${o.nrfHint ? `<p class="nrf-hint">${o.nrfHint}</p>` : ''}
+    <div class="sign">
+      <div>${o.greet}</div>
+      <div class="sign-name">${COMPANY.name}</div>
+      <div>${t(COMPANY.team.de, COMPANY.team.en)}</div>
+    </div>
+  </div>
+  <div class="footer">${COMPANY.name} &middot; ${COMPANY.street}, ${COMPANY.city} &middot; ${COMPANY.phone} &middot; ${COMPANY.mail}</div>
 </div>
 </body></html>`;
 
