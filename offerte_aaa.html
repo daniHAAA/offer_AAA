@@ -38,6 +38,10 @@ textarea{resize:vertical;min-height:52px;line-height:1.5}
 .bact:hover{border-color:var(--g);background:var(--gp)}
 .bpdf{background:var(--dk);color:var(--wh);border-color:var(--dk)}
 .bpdf:hover{opacity:.85;background:var(--dk)}
+/* The .eml route is the one that keeps the layout intact, so it leads visually - the
+   clipboard next to it hands the mail to Word, which rewrites it. */
+.bmail{background:var(--g);color:var(--wh);border-color:var(--g);font-weight:600}
+.bmail:hover{opacity:.88;background:var(--g);border-color:var(--g)}
 .brst{color:#C0392B;border-color:#FADBD8;flex:.45}
 .brst:hover{background:#FDEDEC}
 .bsm{padding:5px 12px;font-size:12px;font-weight:500;font-family:'Inter',Arial,sans-serif;border:1px solid var(--br);border-radius:var(--rsm);cursor:pointer;background:var(--wh);color:var(--dk);display:inline-flex;align-items:center;gap:5px}
@@ -175,8 +179,8 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div id="prevWrap" style="display:none">
     <div class="letter" id="letterOut"></div>
     <div class="brow">
-      <button class="bact" onclick="mkEml()"><i class="ti ti-mail-forward"></i><span id="elbl">Als Outlook-Mail öffnen</span></button>
-      <button class="bact" onclick="copyOut()"><i class="ti ti-copy"></i><span id="clbl">Für Outlook kopieren</span></button>
+      <button class="bact bmail" onclick="mkEml()"><i class="ti ti-mail-forward"></i><span id="elbl">Als Outlook-Mail öffnen</span></button>
+      <button class="bact" onclick="copyOut()"><i class="ti ti-copy"></i><span id="clbl">Kopieren (einfaches Format)</span></button>
       <button class="bact bpdf" onclick="mkPDF()"><i class="ti ti-file-type-pdf"></i><span id="plbl">PDF speichern</span></button>
       <button class="bact brst" onclick="resetForm()"><i class="ti ti-refresh"></i>Zurücksetzen</button>
     </div>
@@ -1984,9 +1988,11 @@ function buildOutlookHtml(o) {
 
 <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="width:${WIDTH}px;background-color:#FFFFFF;border-collapse:collapse">
 
-  <tr><td align="center" bgcolor="${BAND}" style="background-color:${BAND};padding:26px 20px">
-    <div style="${font(8.5, '#D9CDB8', { lh: 13, extra: 'letter-spacing:3px;text-transform:uppercase;' })}">Andermatt</div>
-    <div style="${font(19, '#FFFFFF', { lh: 25 })}">Alpine Apartments</div>
+  <tr><td bgcolor="${BAND}" style="background-color:${BAND};padding:26px 20px">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+      <tr><td align="center" style="padding:0 0 4px;text-align:center;${font(8.5, '#D9CDB8', { lh: 13, extra: 'letter-spacing:3px;text-transform:uppercase;' })}">Andermatt</td></tr>
+      <tr><td align="center" style="text-align:center;${font(19, '#FFFFFF', { lh: 25 })}">Alpine Apartments</td></tr>
+    </table>
   </td></tr>
   ${banner}
 
@@ -2068,7 +2074,7 @@ function copyOut() {
   const label = document.getElementById('clbl');
   const done = suffix => {
     label.textContent = lang === 'de' ? 'Kopiert!' + suffix : 'Copied!' + suffix;
-    setTimeout(() => { label.textContent = lang === 'de' ? 'Für Outlook kopieren' : 'Copy for Outlook'; }, 2500);
+    setTimeout(() => { label.textContent = lang === 'de' ? 'Kopieren (einfaches Format)' : 'Copy (plain format)'; }, 2500);
   };
 
   const html = buildOutlookHtml(lastOffer);
