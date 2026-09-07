@@ -153,7 +153,7 @@ table.pt .muc{color:var(--mu);font-size:12px}
   </div>
   <div class="sec">
     <div class="stit"><i class="ti ti-calendar"></i>Zeitraum</div>
-    <div class="cal-wrap">
+    <div class="cal-wrap" id="cal-home">
       <div class="cal-disp" id="cal-trigger" onclick="toggleCal(event)"><i class="ti ti-calendar-event" style="color:var(--g);font-size:16px"></i><span id="cal-lbl" style="color:var(--mu);flex:1">Anreise und Abreise wählen</span><span id="nchip"></span></div>
       <div class="cal-pop" id="cal-pop" style="display:none" onclick="event.stopPropagation()">
         <div class="cal-nav"><button class="cnbtn" onclick="calPrev(event)">&#8249;</button><span class="cal-mlbl" id="cal-mlbl"></span><button class="cnbtn" onclick="calNext(event)">&#8250;</button></div>
@@ -317,6 +317,10 @@ let departureDate = null;
 let calStep = 1;
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
+// Which period the calendar popup is editing: null for the shared one at the top of the
+// form, otherwise the index of the apartment with its own period. There is one popup for
+// all of them - it moves to whichever trigger was clicked.
+let calTarget = null;
 let offerHistory = JSON.parse(localStorage.getItem('aaa_h8') || '[]');
 let offerNumber = parseInt(localStorage.getItem('aaa_nr8') || '0');
 
@@ -667,31 +671,31 @@ function renderRoomTabs() {
 }
 
 function renderRoomPanels() {
+  releaseRoomCalendar();
   const c = document.getElementById('rpanels');
   c.innerHTML = rooms.map((r, i) => `<div class="rpanel ${i === activeRoomIndex ? 'active' : ''}">${rooms.length > 1 ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bsm bdng" onclick="removeRoom(${i})"><i class="ti ti-trash"></i>${lang === 'de' ? 'Entfernen' : 'Remove'}</button></div>` : ''}<div class="fld" style="margin-bottom:12px"><label>${lang === 'de' ? 'Zimmertyp-Code' : 'Room Type Code'}</label><select onchange="setRoomTypeCode(${i},this.value)">${buildRoomTypeCodeOptions(getRoomTypeCode(r.size, r.cat))}</select></div>${renderRoomDates(r, i)}<div class="togw"><button class="tbtn ${r.priceMode === 'total' ? 'active' : ''}" onclick="setPriceMode(${i},'total')">${lang === 'de' ? 'Gesamtpreis' : 'Total price'}</button><button class="tbtn ${r.priceMode === 'perNight' ? 'active' : ''}" onclick="setPriceMode(${i},'perNight')">${lang === 'de' ? 'Preis/Nacht' : 'Per night'}</button></div><div class="fld" style="margin-bottom:12px"><input type="number" id="rp-p-${i}" value="${r.priceVal}" placeholder="${r.priceMode === 'total' ? 'Gesamtpreis CHF' : 'Preis/Nacht CHF'}" oninput="rooms[${i}].priceVal=this.value" min="0"/></div><div class="g2"><div class="fld"><label>Rate Code</label><select id="rp-rate-${i}" onchange="setRoomRate(${i},this.value)">${CONFIG.rates.map(rt => `<option value="${rt.id}" ${r.rate === rt.id ? 'selected' : ''}>${rt.label}</option>`).join('')}</select></div><div class="fld"><label>${lang === 'de' ? 'Benutzerdefinierte Storno' : 'Custom cancellation'}</label><select onchange="rooms[${i}].customStorno=this.value==='custom';renderRoomPanels()"><option value="auto" ${!r.customStorno ? 'selected' : ''}>Automatisch (Saison)</option><option value="custom" ${r.customStorno ? 'selected' : ''}>Benutzerdefiniert</option></select></div></div>${r.customStorno ? `<div class="fld" style="margin-top:8px"><label>${lang === 'de' ? 'Stornotext' : 'Cancellation text'}</label><textarea rows="3" oninput="rooms[${i}].customStornoText=this.value">${r.customStornoText || ''}</textarea></div>` : ''}</div>`).join('');
 }
 
 // Per-room period. Only offered from the second room on: with a single room the shared
 // period at the top of the form already is that room's period, and a second set of dates
-// would just be a way to contradict it.
+// would just be a way to contradict it. The picker is the same range calendar as the one
+// at the top of the form - arrival, then departure, in one go.
 function renderRoomDates(r, i) {
   if (rooms.length < 2) return '';
   const de = lang === 'de';
-  const nights = ownStayNights(r);
-  const hint = r.useOwnDates
-    ? (nights > 0
-      ? `<span class="ph">${nights} ${de ? 'Nächte' : 'nights'}</span>`
-      : `<span class="ph" style="color:#C0392B">${de ? 'Abreise muss nach der Anreise liegen' : 'departure must be after arrival'}</span>`)
-    : '';
-  const fields = r.useOwnDates
-    ? `<div class="g2"><div class="fld"><label>${de ? 'Anreise' : 'Arrival'}</label><input type="date" id="rp-a-${i}" value="${r.ownArrival}" onchange="setRoomOwnDate(${i},'ownArrival',this.value)"></div><div class="fld"><label>${de ? 'Abreise' : 'Departure'}</label><input type="date" id="rp-d-${i}" value="${r.ownDeparture}" onchange="setRoomOwnDate(${i},'ownDeparture',this.value)"></div></div>`
-    : '';
-  return `<div class="rdrow"><input type="checkbox" id="rp-od-${i}" ${r.useOwnDates ? 'checked' : ''} onchange="setRoomOwnDates(${i},this.checked)"><label for="rp-od-${i}">${de ? 'Eigener Zeitraum für dieses Apartment' : 'Own period for this apartment'}</label>${hint}</div>${fields}`;
+  const box = `<input type="checkbox" id="rp-od-${i}" ${r.useOwnDates ? 'checked' : ''} onchange="setRoomOwnDates(${i},this.checked)"><label for="rp-od-${i}">${de ? 'Eigener Zeitraum für dieses Apartment' : 'Own period for this apartment'}</label>`;
+  if (!r.useOwnDates) return `<div class="rdrow">${box}</div>`;
+
+  const parts = stayTriggerParts(fromDateInputValue(r.ownArrival), fromDateInputValue(r.ownDeparture));
+  return `<div class="rdrow">${box}</div>
+    <div class="cal-wrap" style="margin-bottom:12px">
+      <div class="cal-disp${parts.has ? ' has' : ''}" id="rp-${i}-cal-trigger" onclick="toggleCal(event,${i})"><i class="ti ti-calendar-event" style="color:var(--g);font-size:16px"></i><span id="rp-${i}-cal-lbl" style="color:${parts.muted ? 'var(--mu)' : 'var(--dk)'};flex:1">${parts.text}</span><span id="rp-${i}-nchip">${parts.chip}</span></div>
+    </div>`;
 }
 
 function setRoomOwnDates(i, on) {
   rooms[i].useOwnDates = on;
-  // Start from the shared period rather than from two empty fields - the exception is
+  // Start from the shared period rather than from an empty picker - the exception is
   // usually a day or two either side of it, not a completely unrelated stay.
   if (on && !rooms[i].ownArrival && !rooms[i].ownDeparture) {
     rooms[i].ownArrival = toDateInputValue(arrivalDate);
@@ -701,24 +705,14 @@ function setRoomOwnDates(i, on) {
   renderRoomPanels();
 }
 
-function setRoomOwnDate(i, field, value) {
-  rooms[i][field] = value;
-  // The automatic rate follows the length of stay, so a room with its own dates can
-  // qualify for EXT while the others stay on BAR. Only the affected controls are
-  // refreshed: a full re-render here would pull the focus out of the date field.
-  applyDefaultRateCodes();
-  rooms.forEach((r, n) => {
-    const sel = document.getElementById('rp-rate-' + n);
+// The automatic rate follows the length of stay, so an apartment on its own period can
+// qualify for EXT while the others stay on BAR. Pushed into the open selects directly:
+// re-rendering the panels here would tear down the calendar the user is picking in.
+function syncRateSelects() {
+  rooms.forEach((r, i) => {
+    const sel = document.getElementById('rp-rate-' + i);
     if (sel) sel.value = r.rate;
   });
-  const row = document.getElementById('rp-od-' + i)?.parentElement;
-  const hint = row?.querySelector('.ph');
-  const nights = ownStayNights(rooms[i]);
-  if (hint) {
-    const ok = nights > 0;
-    hint.textContent = ok ? `${nights} ${lang === 'de' ? 'Nächte' : 'nights'}` : (lang === 'de' ? 'Abreise muss nach der Anreise liegen' : 'departure must be after arrival');
-    hint.style.color = ok ? '' : '#C0392B';
-  }
 }
 
 function setRoomTypeCode(i, code) {
@@ -991,8 +985,8 @@ function gen() {
     // price something other than what the form shows.
     if (rooms[i].useOwnDates && !roomStay(i).own) {
       err.textContent = lang === 'de'
-        ? `Zimmer ${i + 1}: Eigener Zeitraum unvollständig - Abreise muss nach der Anreise liegen.`
-        : `Room ${i + 1}: own period incomplete - departure must be after arrival.`;
+        ? `Zimmer ${i + 1}: Eigener Zeitraum unvollständig - bitte Anreise und Abreise wählen.`
+        : `Room ${i + 1}: own period incomplete - please select arrival and departure.`;
       err.style.display = 'block';
       return;
     }
@@ -1177,6 +1171,7 @@ function resetForm() {
   arrivalDate = null;
   departureDate = null;
   calStep = 1;
+  calTarget = null;
   updateDateDisplay();
   rooms = [createRoom()];
   activeRoomIndex = 0;
@@ -1205,15 +1200,57 @@ function formatFullDate(d) {
     : `${WEEKDAY_FULL_EN[dt.getDay()]}, ${dt.getDate()} ${MONTH_NAMES_EN[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
-function toggleCal(e) {
+// The two dates of whichever period the calendar is currently pointed at.
+function calStayDates() {
+  if (calTarget === null) return { arrival: arrivalDate, departure: departureDate };
+  const r = rooms[calTarget];
+  return r
+    ? { arrival: fromDateInputValue(r.ownArrival), departure: fromDateInputValue(r.ownDeparture) }
+    : { arrival: null, departure: null };
+}
+
+function calWriteStay(arrival, departure) {
+  if (calTarget === null) {
+    arrivalDate = arrival;
+    departureDate = departure;
+    return;
+  }
+  const r = rooms[calTarget];
+  if (!r) return;
+  r.ownArrival = toDateInputValue(arrival);
+  r.ownDeparture = toDateInputValue(departure);
+}
+
+// An apartment's calendar lives inside its panel, which renderRoomPanels() replaces
+// wholesale - so hand the popup back to its home in the Zeitraum section before that
+// happens, otherwise it is thrown away with the panel and the next click finds nothing.
+function releaseRoomCalendar() {
+  const p = document.getElementById('cal-pop');
+  const home = document.getElementById('cal-home');
+  if (!p || !home || !p.parentElement || !p.parentElement.closest('#rpanels')) return;
+  p.style.display = 'none';
+  calTarget = null;
+  home.appendChild(p);
+}
+
+function toggleCal(e, target = null) {
   e.stopPropagation();
   const p = document.getElementById('cal-pop');
-  // The calendar popup is shared between the Create and Group Offer tabs (same
-  // arrival/departure state); relocate it into whichever tab's .cal-wrap opened it,
-  // since its absolute position is anchored to that ancestor.
+  // One popup serves the Create tab, the Group Offer tab and every apartment with its own
+  // period; relocate it into whichever .cal-wrap opened it, since its absolute position is
+  // anchored to that ancestor.
   const wrap = e.currentTarget.closest('.cal-wrap');
+  const switching = calTarget !== target;
   if (wrap && p.parentElement !== wrap) wrap.appendChild(p);
-  p.style.display = p.style.display === 'block' ? 'none' : 'block';
+  p.style.display = switching || p.style.display !== 'block' ? 'block' : 'none';
+  if (switching) {
+    // A fresh period starts with the arrival again, and the view jumps to where that
+    // period actually is - the apartments can be months apart from each other.
+    calTarget = target;
+    calStep = 1;
+    const a = calStayDates().arrival;
+    if (a) { calYear = a.getFullYear(); calMonth = a.getMonth(); }
+  }
   if (p.style.display === 'block') renderCalendar();
 }
 
@@ -1222,6 +1259,7 @@ function renderCalendar() {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const { arrival: calArrival, departure: calDeparture } = calStayDates();
 
   let html = (lang === 'de' ? DAY_NAMES_DE : DAY_NAMES_EN).map(d => `<div class="cdh">${d}</div>`).join('');
 
@@ -1234,9 +1272,9 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const dt = new Date(calYear, calMonth, d);
     const isPast = dt < today;
-    const isArrival = arrivalDate && dt.getTime() === arrivalDate.getTime();
-    const isDeparture = departureDate && dt.getTime() === departureDate.getTime();
-    const isInRange = arrivalDate && departureDate && dt > arrivalDate && dt < departureDate;
+    const isArrival = calArrival && dt.getTime() === calArrival.getTime();
+    const isDeparture = calDeparture && dt.getTime() === calDeparture.getTime();
+    const isInRange = calArrival && calDeparture && dt > calArrival && dt < calDeparture;
     const isToday = dt.getTime() === today.getTime();
 
     let cls = 'cd';
@@ -1252,9 +1290,13 @@ function renderCalendar() {
   document.getElementById('cal-grid').innerHTML = html;
 
   const hint = document.getElementById('cal-hint');
-  if (!arrivalDate) hint.textContent = lang === 'de' ? 'Anreisedatum wählen' : 'Select arrival date';
-  else if (!departureDate) hint.textContent = lang === 'de' ? 'Jetzt Abreisedatum wählen →' : 'Now select departure →';
-  else hint.textContent = lang === 'de' ? `${getNights()} Nächte gewählt` : `${getNights()} nights selected`;
+  // With several calendars in the form the hint also has to say which period is being
+  // edited, otherwise an open popup in an apartment panel looks like the shared one.
+  const who = calTarget === null ? '' : `${lang === 'de' ? 'Apartment' : 'Apartment'} ${calTarget + 1} · `;
+  const nights = calArrival && calDeparture ? (calDeparture - calArrival) / 86400000 : 0;
+  if (!calArrival) hint.textContent = who + (lang === 'de' ? 'Anreisedatum wählen' : 'Select arrival date');
+  else if (!calDeparture) hint.textContent = who + (lang === 'de' ? 'Jetzt Abreisedatum wählen →' : 'Now select departure →');
+  else hint.textContent = who + (lang === 'de' ? `${nights} Nächte gewählt` : `${nights} nights selected`);
 }
 
 function calPrev(e) {
@@ -1272,56 +1314,70 @@ function calNext(e) {
 function pickDay(e, y, m, d) {
   e.stopPropagation();
   const dt = new Date(y, m, d);
-  if (!arrivalDate || calStep === 1) {
-    arrivalDate = dt;
-    departureDate = null;
-    calStep = 2;
-  } else if (dt <= arrivalDate) {
-    arrivalDate = dt;
-    departureDate = null;
+  const cur = calStayDates();
+  let arrival = cur.arrival, departure = cur.departure;
+
+  if (!arrival || calStep === 1 || dt <= arrival) {
+    arrival = dt;
+    departure = null;
     calStep = 2;
   } else {
-    departureDate = dt;
+    departure = dt;
     calStep = 1;
+  }
+  calWriteStay(arrival, departure);
+
+  if (departure) {
     applyDefaultRateCodes();
-    renderRoomPanels();
+    // The apartment's own calendar sits inside the panel, so only the affected controls
+    // are refreshed there; the shared one can rebuild the panels freely.
+    if (calTarget === null) renderRoomPanels(); else syncRateSelects();
   }
   // Refresh the trigger label on every pick, not just once the departure is set -
   // otherwise choosing a new arrival left the previous complete range on screen while
   // the offer could no longer be generated ("Bitte Zeitraum wählen").
   updateDateDisplay();
+  if (arrival && departure) document.getElementById('cal-pop').style.display = 'none';
   renderCalendar();
 }
 
+// How a date trigger reads for a given period. Shared by the initial render of an
+// apartment panel and by every later refresh, so the two can't word it differently.
+function stayTriggerParts(arrival, departure) {
+  const nights = arrival && departure ? (departure - arrival) / 86400000 : 0;
+  if (nights > 0) return {
+    text: `${formatDate(arrival)}  →  ${formatDate(departure)}`,
+    muted: false,
+    chip: `<span class="nchip">${nights} ${lang === 'de' ? 'Nächte' : 'nights'}</span>`,
+    has: true
+  };
+  if (arrival) return { text: formatDate(arrival) + ' → ?', muted: false, chip: '', has: false };
+  return {
+    text: lang === 'de' ? 'Anreise und Abreise wählen' : 'Select arrival and departure',
+    muted: true, chip: '', has: false
+  };
+}
+
+function updateStayTrigger(prefix, arrival, departure) {
+  const lbl = document.getElementById(prefix + 'cal-lbl');
+  const chip = document.getElementById(prefix + 'nchip');
+  const trigger = document.getElementById(prefix + 'cal-trigger');
+  if (!lbl || !chip || !trigger) return;
+
+  const parts = stayTriggerParts(arrival, departure);
+  lbl.textContent = parts.text;
+  lbl.style.color = parts.muted ? 'var(--mu)' : 'var(--dk)';
+  chip.innerHTML = parts.chip;
+  trigger.classList.toggle('has', parts.has);
+}
+
 function updateDateDisplay() {
-  const nights = getNights();
   // The same arrival/departure state feeds both the Create tab and the Group Offer
-  // tab's date display, so both trigger widgets are refreshed here (whichever exist).
-  ['', 'grp-'].forEach(prefix => {
-    const lbl = document.getElementById(prefix + 'cal-lbl');
-    const chip = document.getElementById(prefix + 'nchip');
-    const trigger = document.getElementById(prefix + 'cal-trigger');
-    if (!lbl || !chip || !trigger) return;
-
-    if (arrivalDate && departureDate) {
-      lbl.textContent = `${formatDate(arrivalDate)}  →  ${formatDate(departureDate)}`;
-      lbl.style.color = 'var(--dk)';
-      chip.innerHTML = `<span class="nchip">${nights} ${lang === 'de' ? 'Nächte' : 'nights'}</span>`;
-      trigger.classList.add('has');
-    } else if (arrivalDate) {
-      lbl.textContent = formatDate(arrivalDate) + ' → ?';
-      lbl.style.color = 'var(--dk)';
-      chip.innerHTML = '';
-      trigger.classList.remove('has');
-    } else {
-      lbl.textContent = lang === 'de' ? 'Anreise und Abreise wählen' : 'Select arrival and departure';
-      lbl.style.color = 'var(--mu)';
-      chip.innerHTML = '';
-      trigger.classList.remove('has');
-    }
-  });
-
-  if (arrivalDate && departureDate) document.getElementById('cal-pop').style.display = 'none';
+  // tab's date display, so both trigger widgets are refreshed here (whichever exist),
+  // plus the trigger of every apartment running on a period of its own.
+  updateStayTrigger('', arrivalDate, departureDate);
+  updateStayTrigger('grp-', arrivalDate, departureDate);
+  rooms.forEach((r, i) => updateStayTrigger(`rp-${i}-`, fromDateInputValue(r.ownArrival), fromDateInputValue(r.ownDeparture)));
 }
 
 document.addEventListener('click', e => {
@@ -1367,6 +1423,7 @@ function loadFromHistory(i, e) {
     arrivalDate = tpl.arrival ? new Date(tpl.arrival) : null;
     departureDate = tpl.departure ? new Date(tpl.departure) : null;
     calStep = 1;
+    calTarget = null;
     if (arrivalDate) { calYear = arrivalDate.getFullYear(); calMonth = arrivalDate.getMonth(); }
     updateDateDisplay();
     renderCalendar();
