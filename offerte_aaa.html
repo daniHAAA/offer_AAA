@@ -234,6 +234,11 @@ table.pt .muc{color:var(--mu);font-size:12px}
   <div id="grpErrMsg" class="err" style="display:none"></div>
 </div>
 <div id="pane-settings" class="pane">
+  <div class="sec">
+    <div class="stit"><i class="ti ti-user-check"></i>Bearbeiter/in</div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Wird in der Signatur von Offerte und Mail unter dem Team aufgeführt, damit bei Rückfragen nachvollziehbar ist, wer das Angebot verschickt hat. Einmal ausfüllen, gilt dann für diesen Arbeitsplatz.</p>
+    <div class="fld"><label>Name</label><input type="text" id="sender-name" placeholder="z.B. Daniel Hilbert"></div>
+  </div>
   <div class="sec"><div class="stit"><i class="ti ti-home"></i>Endreinigung (CHF)</div><div id="s-clean"></div></div>
   <div class="sec"><div class="stit"><i class="ti ti-tag"></i>Rate Codes</div><p style="font-size:12px;color:var(--mu);margin-bottom:.75rem">Platzhalter <code style="background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px">{days}</code> = Stornotage je nach Saison</p><div id="s-rates"></div><button class="bsm badd" onclick="addRate()" style="margin-top:.75rem"><i class="ti ti-plus"></i>Rate Code hinzufügen</button></div>
   <div class="sec">
@@ -363,6 +368,9 @@ const DEFAULT_CONFIG = {
     catLinkDe: 'alpine.apartments/apartments',
     catLinkEn: 'alpine.apartments/en/apartments'
   },
+  // Who is sending: filled in once per workstation and printed under the team line, so a
+  // later question about an offer can be traced back to a person.
+  senderName: '',
   // Optional banner shown under the wordmark in the Outlook mail. Must be a publicly
   // reachable URL - a mail cannot display a picture from your own hard drive. Leave
   // empty and the mail simply starts with the wordmark band.
@@ -432,6 +440,7 @@ if (!CONFIG.groupTexts) CONFIG.groupTexts = JSON.parse(JSON.stringify(DEFAULT_CO
 else Object.keys(DEFAULT_CONFIG.groupTexts).forEach(k => { if (!(k in CONFIG.groupTexts)) CONFIG.groupTexts[k] = DEFAULT_CONFIG.groupTexts[k]; });
 if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
 if (typeof CONFIG.mailImage !== 'string') CONFIG.mailImage = DEFAULT_CONFIG.mailImage;
+if (typeof CONFIG.senderName !== 'string') CONFIG.senderName = DEFAULT_CONFIG.senderName;
 
 function createRoom() {
   return { size: 'studio', cat: 'Standard', priceMode: 'total', priceVal: '', rate: 'BAR', rateTouched: false, customStorno: false, customStornoText: '' };
@@ -1278,6 +1287,9 @@ function renderSettingsPanel() {
 
   document.getElementById('s-greet').innerHTML = CONFIG.greets.map((g, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--br)"><input type="text" id="gde-${i}" value="${g.de}" placeholder="DE"><input type="text" id="gen-${i}" value="${g.en}" placeholder="EN">${CONFIG.greets.length > 1 ? `<button class="bsm bdng" onclick="removeGreet(${i})"><i class="ti ti-trash"></i></button>` : '<div></div>'}</div>`).join('');
 
+  const senderInput = document.getElementById('sender-name');
+  if (senderInput) senderInput.value = CONFIG.senderName || '';
+
   const mailImageInput = document.getElementById('mail-image');
   // A stored picture is data, not something to show in a text field - the field only ever
   // carries a URL, and the preview below shows a stored one.
@@ -1638,6 +1650,9 @@ function saveSettings() {
     if (en) CONFIG.stdinfo[k + 'En'] = en.value;
   });
 
+  const senderInput = document.getElementById('sender-name');
+  if (senderInput) CONFIG.senderName = senderInput.value.trim();
+
   const mailImageInput = document.getElementById('mail-image');
   // Typing a URL replaces a stored picture; leaving the field empty keeps whatever is
   // stored rather than silently deleting it.
@@ -1938,6 +1953,7 @@ ${blocksHtml}
     <p>${t(gt.closingIntroDe, gt.closingIntroEn)}</p>
     <p>${t(gt.closingGreetingDe, gt.closingGreetingEn)}</p>
     <p>${t(gt.closingTeamDe, gt.closingTeamEn)}</p>
+    ${CONFIG.senderName ? `<p>${CONFIG.senderName}</p>` : ''}
   </div>
 </div>
   </div>
@@ -2084,7 +2100,6 @@ function buildOutlookHtml(o) {
   <tr><td style="padding:${PAD}px">
     <table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse">
 
-      ${para(t('Offerte', 'Offer'), 7.5, GOLD, 8, { sans: true, lh: 10, extra: 'letter-spacing:1.5px;text-transform:uppercase;' })}
       ${para(o.salLine, 12.5, INK, 14, { lh: 17 })}
       ${para(o.intro, 10, '#4A443C', 20)}
 
@@ -2108,6 +2123,7 @@ function buildOutlookHtml(o) {
       ${para(o.greet, 10, '#4A443C', 16)}
       <tr><td style="padding:16px 0 0;border-top:${HAIRLINE.soft};${font(10.5, INK, { lh: 15 })}"><b>${COMPANY.name}</b></td></tr>
       <tr><td style="${font(9, MUTED, { lh: 15 })}">${t(COMPANY.team.de, COMPANY.team.en)}</td></tr>
+      ${CONFIG.senderName ? `<tr><td style="${font(9, MUTED, { lh: 15 })}">${CONFIG.senderName}</td></tr>` : ''}
       <tr><td style="${font(9, MUTED, { lh: 15 })}">${COMPANY.street}, ${COMPANY.city}</td></tr>
       <tr><td style="${font(9, MUTED, { lh: 15 })}">${COMPANY.phone} &nbsp;|&nbsp; <a href="mailto:${COMPANY.mail}" style="color:${GOLD}">${COMPANY.mail}</a></td></tr>
 
@@ -2149,6 +2165,7 @@ function buildOfferPlainText(o) {
   o.outro.forEach(p => lines.push(p.link ? `${p.text} ${p.link}` : p.text, ''));
   if (o.nrfHint) lines.push(o.nrfHint.replace(/<[^>]+>/g, ''), '');
   lines.push(o.greet, '', COMPANY.name, t(COMPANY.team.de, COMPANY.team.en),
+    ...(CONFIG.senderName ? [CONFIG.senderName] : []),
     `${COMPANY.street}, ${COMPANY.city}`, `${COMPANY.phone} | ${COMPANY.mail}`, COMPANY.web);
   return lines.join('\n');
 }
@@ -2423,6 +2440,7 @@ a{color:#8B6914}
       <div>${o.greet}</div>
       <div class="sign-name">${COMPANY.name}</div>
       <div>${t(COMPANY.team.de, COMPANY.team.en)}</div>
+      ${CONFIG.senderName ? `<div>${CONFIG.senderName}</div>` : ''}
     </div>
   </div>
   <div class="footer">${COMPANY.name} &middot; ${COMPANY.street}, ${COMPANY.city} &middot; ${COMPANY.phone} &middot; ${COMPANY.mail}</div>
