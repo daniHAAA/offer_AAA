@@ -2119,14 +2119,24 @@ function mkPDF() {
 <title>Offerte_AAA_${o.nr}_${o.guest.replace(/\s+/g, '_')}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Georgia,'Times New Roman',Times,serif;font-size:10pt;color:#1F1B16;background:#fff}
+/* Arial Nova is the house face. Chrome embeds whatever it actually rendered with, so a
+   machine without it silently prints the fallback - the PDF stays self-contained either
+   way, but only looks right where the font is installed. */
+body{font-family:'Arial Nova',Arial,Helvetica,sans-serif;font-size:10pt;color:#1F1B16;background:#fff}
+/* On paper the margin box comes from @page; on screen the preview window has none, so
+   the masthead's negative margins would hang off the top. Giving the screen view the
+   same frame keeps preview and print identical. */
 .sheet{padding:0 0 6mm}
-.band{background:#3B332C;color:#fff;text-align:center;padding:9mm 10mm}
+@media screen{.sheet{padding:15mm 14mm 6mm;max-width:210mm;margin:0 auto;box-shadow:0 0 0 1px #E7E3DC}}
+/* Negative margins matching @page pull the masthead out to the paper edge on sheet one,
+   while @page keeps its margins for every following sheet. */
+.masthead{margin:-15mm -14mm 9mm}
+.band{background:#3B332C;color:#fff;text-align:center;padding:12mm 14mm}
 .band-sup{font-size:8.5pt;letter-spacing:.28em;text-transform:uppercase;color:#D9CDB8;margin-bottom:2mm}
 .band-name{font-size:19pt;line-height:1.2}
 .banner{display:block;width:100%}
-.content{padding:9mm 0 0}
-.meta{display:flex;justify-content:space-between;align-items:baseline;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#8B6914;margin-bottom:5mm}
+.content{padding:0}
+.meta{display:flex;justify-content:space-between;align-items:baseline;font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#8B6914;margin-bottom:5mm}
 .meta span:last-child{color:#7A736A;letter-spacing:.06em}
 .salutation{font-size:13pt;margin-bottom:4mm}
 .intro{font-size:10pt;color:#4A443C;line-height:1.65;margin-bottom:7mm}
@@ -2138,12 +2148,12 @@ body{font-family:Georgia,'Times New Roman',Times,serif;font-size:10pt;color:#1F1
 .option{margin-bottom:7mm;page-break-inside:avoid;break-inside:avoid}
 .option table,.option .storno{page-break-inside:avoid;break-inside:avoid}
 tr{page-break-inside:avoid;break-inside:avoid}
-.option-cap{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7.5pt;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8B6914;margin-bottom:1.5mm}
+.option-cap{font-size:7.5pt;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8B6914;margin-bottom:1.5mm}
 .option-head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:2mm;border-bottom:0.5pt solid #C8AF77;margin-bottom:3.5mm}
 .option-title{font-size:15pt}
-.rate-badge{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7.5pt;font-weight:700;letter-spacing:.1em;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:1mm 2.4mm;white-space:nowrap}
+.rate-badge{font-size:7.5pt;font-weight:700;letter-spacing:.1em;color:#8B6914;background:#FAF5E8;border:0.4pt solid #E8D5A0;padding:1mm 2.4mm;white-space:nowrap}
 .items{width:100%;border-collapse:collapse;font-size:9.5pt}
-.items th{text-align:left;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:7pt;font-weight:700;color:#8F887E;text-transform:uppercase;letter-spacing:.12em;padding:0 1.6mm 1.6mm;border-bottom:0.4pt solid #E7E3DC}
+.items th{text-align:left;font-size:7pt;font-weight:700;color:#8F887E;text-transform:uppercase;letter-spacing:.12em;padding:0 1.6mm 1.6mm;border-bottom:0.4pt solid #E7E3DC}
 .items td{padding:2mm 1.6mm;border-bottom:0.3pt solid #EFEBE4;vertical-align:top}
 .items td.det{color:#7A736A;font-size:9pt}
 .items td.amt,.items th.amt{text-align:right;white-space:nowrap}
@@ -2169,11 +2179,13 @@ a{color:#8B6914}
 @page{margin:15mm 14mm;size:A4}
 </style></head><body>
 <div class="sheet">
-  <div class="band">
-    <div class="band-sup">Andermatt</div>
-    <div class="band-name">Alpine Apartments</div>
+  <div class="masthead">
+    <div class="band">
+      <div class="band-sup">Andermatt</div>
+      <div class="band-name">Alpine Apartments</div>
+    </div>
+    ${CONFIG.mailImage ? `<img class="banner" src="${CONFIG.mailImage}" alt="">` : ''}
   </div>
-  ${CONFIG.mailImage ? `<img class="banner" src="${CONFIG.mailImage}" alt="">` : ''}
   <div class="content">
     <div class="meta"><span>${t('Offerte', 'Offer')}</span><span>${t('Nr.', 'No.')} ${o.nr} &nbsp;·&nbsp; ${o.today}</span></div>
     <div class="salutation">${o.salLine}</div>
