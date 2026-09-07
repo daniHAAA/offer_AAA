@@ -1840,109 +1840,140 @@ ${blocksHtml}
 // Builds the mail body as Outlook-safe HTML: nested tables, inline styles on every
 // cell, web-safe fonts, no flexbox/grid and no external CSS - Outlook's Word renderer
 // ignores anything else. Driven by the offer data, not by the preview DOM.
+// Builds the mail body for Outlook Classic, which renders HTML through Microsoft Word.
+// That engine ignores margin-based spacing, text-decoration, max-width and most
+// shorthand CSS, so this markup sticks to what Word actually honours: nested tables with
+// fixed pixel widths, spacing via cell padding and spacer rows, <s>/<b> elements instead
+// of text-decoration/font-weight, font settings repeated on every cell (Word does not
+// inherit them), and mso-line-height-rule for predictable leading.
 function buildOutlookHtml(o) {
   const t = (de, en) => lang === 'de' ? de : en;
-  const FONT = "font-family:'Segoe UI',Arial,Helvetica,sans-serif";
-  const cell = 'padding:7pt 8pt;border-bottom:1px solid #EEEEEE';
+  const FF = "'Segoe UI',Arial,Helvetica,sans-serif";
+  const WIDTH = 640;
 
-  const rowHtml = r => {
+  // Word needs the font repeated per cell; line-height only sticks with the mso rule.
+  const font = (size, color, opts = {}) =>
+    `font-family:${FF};font-size:${size}pt;color:${color};` +
+    `mso-line-height-rule:exactly;line-height:${opts.lh || Math.round(size * 1.5)}pt;` +
+    (opts.extra || '');
+
+  const spacer = h => `<tr><td height="${h}" style="height:${h}px;font-size:1px;line-height:1px">&nbsp;</td></tr>`;
+  const rule = (color, h) => `<tr><td height="${h}" bgcolor="${color}" style="height:${h}px;font-size:1px;line-height:1px;background-color:${color}">&nbsp;</td></tr>`;
+
+  const itemRow = r => {
     const strike = r.kind === 'strike';
     const color = strike ? '#AAAAAA' : r.kind === 'discount' ? '#2D7D46' : '#1A1A1A';
-    const deco = strike ? ';text-decoration:line-through' : '';
-    const weight = r.kind === 'strong' ? ';font-weight:700' : '';
+    const wrap = v => strike ? `<s>${v}</s>` : r.kind === 'strong' ? `<b>${v}</b>` : v;
+    const pad = 'padding:8px 8px;border-bottom:1px solid #EEEEEE';
     return `<tr>
-      <td style="${cell};${FONT};font-size:10pt;color:${color}${deco}${weight}">${r.label}</td>
-      <td style="${cell};${FONT};font-size:9pt;color:#888888${deco}">${r.detail}</td>
-      <td align="right" style="${cell};${FONT};font-size:10pt;color:${color};white-space:nowrap${deco}${weight}">${r.amount}</td>
+      <td style="${pad};${font(10, color)}">${wrap(r.label)}</td>
+      <td style="${pad};${font(9, strike ? '#AAAAAA' : '#888888')}">${wrap(r.detail)}</td>
+      <td align="right" style="${pad};${font(10, color, { extra: 'white-space:nowrap;' })}">${wrap(r.amount)}</td>
     </tr>`;
   };
 
-  const optionHtml = room => `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-bottom:18pt">
-  <tr><td style="padding-bottom:5pt;border-bottom:2px solid #8B6914">
-    ${room.caption ? `<div style="${FONT};font-size:8pt;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8B6914;padding-bottom:3pt">${room.caption}</div>` : ''}
-    <span style="${FONT};font-size:13pt;font-weight:700;color:#1A1A1A">${room.title}</span>
-    <span style="${FONT};font-size:8pt;font-weight:700;color:#8B6914">&nbsp;&nbsp;${room.rate}</span>
-  </td></tr>
-  <tr><td style="padding-top:8pt">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+  const headCell = (w, align, text) =>
+    `<td width="${w}" align="${align}" style="width:${w}px;padding:0 8px 5px;${font(8, '#999999', { lh: 10 })}"><b>${text}</b></td>`;
+
+  const option = room => `<table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
+  ${room.caption ? `<tr><td style="padding:0 0 3px;${font(8, '#8B6914', { lh: 10 })}"><b>${room.caption.toUpperCase()}</b></td></tr>` : ''}
+  <tr><td style="padding:0 0 6px;${font(13, '#1A1A1A', { lh: 17 })}"><b>${room.title}</b>&nbsp;&nbsp;<span style="${font(8, '#8B6914', { lh: 17 })}">${room.rate}</span></td></tr>
+  ${rule('#8B6914', 2)}
+  ${spacer(10)}
+  <tr><td style="padding:0">
+    <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
       <tr>
-        <td width="37%" style="padding:0 8pt 4pt;${FONT};font-size:8pt;font-weight:700;color:#999999;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid #DDDDDD">${t('Position', 'Item')}</td>
-        <td width="38%" style="padding:0 8pt 4pt;${FONT};font-size:8pt;font-weight:700;color:#999999;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid #DDDDDD">Details</td>
-        <td width="25%" align="right" style="padding:0 8pt 4pt;${FONT};font-size:8pt;font-weight:700;color:#999999;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid #DDDDDD">${t('Betrag', 'Amount')}</td>
+        ${headCell(Math.round(WIDTH * 0.37), 'left', t('Position', 'Item'))}
+        ${headCell(Math.round(WIDTH * 0.38), 'left', 'Details')}
+        ${headCell(Math.round(WIDTH * 0.25), 'right', t('Betrag', 'Amount'))}
       </tr>
-      ${room.rows.map(rowHtml).join('')}
+      <tr><td colspan="3" height="1" bgcolor="#DDDDDD" style="height:1px;font-size:1px;line-height:1px;background-color:#DDDDDD">&nbsp;</td></tr>
+      ${room.rows.map(itemRow).join('')}
+      <tr><td colspan="3" height="2" bgcolor="#AAAAAA" style="height:2px;font-size:1px;line-height:1px;background-color:#AAAAAA">&nbsp;</td></tr>
       <tr>
-        <td colspan="2" style="padding:9pt 8pt 4pt;border-top:2px solid #AAAAAA;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A">${t('Gesamtbetrag', 'Total')}</td>
-        <td align="right" style="padding:9pt 8pt 4pt;border-top:2px solid #AAAAAA;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A;white-space:nowrap">${room.total}</td>
+        <td colspan="2" style="padding:9px 8px 4px;${font(11, '#1A1A1A', { lh: 15 })}"><b>${t('Gesamtbetrag', 'Total')}</b></td>
+        <td align="right" style="padding:9px 8px 4px;${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${room.total}</b></td>
       </tr>
     </table>
   </td></tr>
-  <tr><td style="padding-top:9pt">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td width="3" bgcolor="#E8D5A0" style="font-size:1pt;line-height:1pt">&nbsp;</td>
-      <td style="padding:6pt 10pt;${FONT};font-size:9pt;color:#666666;line-height:1.5"><b>${t('Stornobedingungen:', 'Cancellation terms:')}</b> ${room.storno}${room.pay ? ' ' + room.pay : ''}</td>
-    </tr></table>
+  ${spacer(10)}
+  <tr><td style="padding:0">
+    <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
+      <tr>
+        <td width="3" bgcolor="#E8D5A0" style="width:3px;font-size:1px;line-height:1px;background-color:#E8D5A0">&nbsp;</td>
+        <td style="padding:7px 10px;${font(9, '#666666', { lh: 14 })}"><b>${t('Stornobedingungen:', 'Cancellation terms:')}</b> ${room.storno}${room.pay ? ' ' + room.pay : ''}</td>
+      </tr>
+    </table>
   </td></tr>
+  ${spacer(20)}
 </table>`;
 
-  const grandHtml = o.grand ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="border-collapse:collapse;margin-bottom:18pt">
-  <tr><td style="padding:12pt 14pt">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+  const grand = o.grand ? `<table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF5E8" style="width:${WIDTH}px;border-collapse:collapse;background-color:#FAF5E8">
+  <tr><td style="padding:12px 14px">
+    <table width="${WIDTH - 28}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH - 28}px;border-collapse:collapse">
       ${o.grand.rows.map(r => `<tr>
-        <td style="padding:5pt 0;${FONT};font-size:10pt;color:#1A1A1A">${r.label}</td>
-        <td style="padding:5pt 0;${FONT};font-size:9pt;color:#888888">${r.detail}</td>
-        <td align="right" style="padding:5pt 0;${FONT};font-size:10pt;color:#1A1A1A;white-space:nowrap">${r.amount}</td>
+        <td style="padding:5px 0;${font(10, '#1A1A1A')}">${r.label}</td>
+        <td style="padding:5px 0;${font(9, '#888888')}">${r.detail}</td>
+        <td align="right" style="padding:5px 0;${font(10, '#1A1A1A', { extra: 'white-space:nowrap;' })}">${r.amount}</td>
       </tr>`).join('')}
+      <tr><td colspan="3" height="1" bgcolor="#8B6914" style="height:1px;font-size:1px;line-height:1px;background-color:#8B6914">&nbsp;</td></tr>
       <tr>
-        <td colspan="2" style="padding:9pt 0 2pt;border-top:1px solid #8B6914;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A">${o.grand.label}</td>
-        <td align="right" style="padding:9pt 0 2pt;border-top:1px solid #8B6914;${FONT};font-size:11pt;font-weight:700;color:#1A1A1A;white-space:nowrap">${o.grand.total}</td>
+        <td colspan="2" style="padding:8px 0 2px;${font(11, '#1A1A1A', { lh: 15 })}"><b>${o.grand.label}</b></td>
+        <td align="right" style="padding:8px 0 2px;${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${o.grand.total}</b></td>
       </tr>
     </table>
   </td></tr>
-</table>` : '';
+</table>
+${'<table width="' + WIDTH + '" cellpadding="0" cellspacing="0" border="0" style="width:' + WIDTH + 'px"><tr><td height="20" style="height:20px;font-size:1px;line-height:1px">&nbsp;</td></tr></table>'}` : '';
 
-  const stayRow = (label, value) => `<tr><td style="padding:2pt 14pt 2pt 0;${FONT};font-size:10pt;font-weight:700;color:#1A1A1A">${label}</td><td style="padding:2pt 0;${FONT};font-size:10pt;color:#444444">${value}</td></tr>`;
+  const stayRow = (label, value) => `<tr>
+    <td style="padding:2px 16px 2px 0;${font(10, '#1A1A1A', { lh: 15 })}"><b>${label}</b></td>
+    <td style="padding:2px 0;${font(10, '#444444', { lh: 15 })}">${value}</td>
+  </tr>`;
 
-  const outroHtml = o.outro.map(p => {
+  const para = (text, size, color, padBottom) =>
+    `<tr><td style="padding:0 0 ${padBottom}px;${font(size, color, { lh: Math.round(size * 1.55) })}">${text}</td></tr>`;
+
+  const outro = o.outro.map(p => {
     const body = p.link ? `${p.text} <a href="https://${p.link}" style="color:#8B6914">${p.link}</a>` : p.text;
-    return `<p style="${FONT};font-size:${p.small ? '9pt' : '10pt'};color:${p.small ? '#888888' : '#444444'};line-height:1.6;margin:0 0 10pt">${body}</p>`;
+    return para(body, p.small ? 9 : 10, p.small ? '#888888' : '#444444', 12);
   }).join('');
 
-  return `<html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:16pt;background:#FFFFFF;${FONT};font-size:10pt;color:#1A1A1A">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px"><tr><td>
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head><meta charset="UTF-8"><meta name="ProgId" content="Word.Document"></head>
+<body style="margin:0;padding:16px;background-color:#FFFFFF">
+<table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
 
-<p style="${FONT};font-size:11pt;color:#1A1A1A;margin:0 0 12pt">${o.salLine}</p>
-<p style="${FONT};font-size:10pt;color:#444444;line-height:1.6;margin:0 0 16pt">${o.intro}</p>
+${para(o.salLine, 11, '#1A1A1A', 14)}
+${para(o.intro, 10, '#444444', 18)}
 
-<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20pt">
-  ${stayRow(t('Anreise', 'Arrival'), o.arrivalFull)}
-  ${stayRow(t('Abreise', 'Departure'), o.departureFull)}
-  ${stayRow(t('Dauer', 'Duration'), `${o.nights} ${t('Nächte', 'nights')}`)}
-  ${o.guestInfo ? stayRow(t('Gäste', 'Guests'), o.guestInfo) : ''}
+<tr><td style="padding:0 0 20px">
+  <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+    ${stayRow(t('Anreise', 'Arrival'), o.arrivalFull)}
+    ${stayRow(t('Abreise', 'Departure'), o.departureFull)}
+    ${stayRow(t('Dauer', 'Duration'), `${o.nights} ${t('Nächte', 'nights')}`)}
+    ${o.guestInfo ? stayRow(t('Gäste', 'Guests'), o.guestInfo) : ''}
+  </table>
+</td></tr>
+
+<tr><td style="padding:0">${o.rooms.map(option).join('')}${grand}</td></tr>
+
+${para(o.valid, 10, '#444444', 14)}
+<tr><td style="padding:0 0 20px;${font(10.5, '#8B6914', { lh: 16 })}"><b>${o.cta}</b></td></tr>
+
+${outro}
+${o.nrfHint ? para(o.nrfHint, 10, '#1A1A1A', 12) : ''}
+
+${para(o.greet, 10, '#444444', 14)}
+${rule('#DDDDDD', 1)}
+${spacer(10)}
+<tr><td style="padding:0 0 2px;${font(10, '#1A1A1A', { lh: 15 })}"><b>${COMPANY.name}</b></td></tr>
+<tr><td style="${font(9, '#666666', { lh: 15 })}">${t(COMPANY.team.de, COMPANY.team.en)}</td></tr>
+<tr><td style="${font(9, '#666666', { lh: 15 })}">${COMPANY.street}, ${COMPANY.city}</td></tr>
+<tr><td style="${font(9, '#666666', { lh: 15 })}">${COMPANY.phone} &nbsp;|&nbsp; <a href="mailto:${COMPANY.mail}" style="color:#8B6914">${COMPANY.mail}</a></td></tr>
+<tr><td style="${font(9, '#666666', { lh: 15 })}"><a href="https://${COMPANY.web}" style="color:#8B6914">${COMPANY.web}</a></td></tr>
+
 </table>
-
-${o.rooms.map(optionHtml).join('')}
-${grandHtml}
-
-<p style="${FONT};font-size:10pt;color:#444444;line-height:1.6;margin:0 0 12pt">${o.valid}</p>
-<p style="${FONT};font-size:10.5pt;font-weight:700;color:#8B6914;line-height:1.5;margin:0 0 18pt">${o.cta}</p>
-
-${outroHtml}
-${o.nrfHint ? `<p style="${FONT};font-size:10pt;color:#1A1A1A;line-height:1.6;margin:0 0 12pt">${o.nrfHint}</p>` : ''}
-
-<p style="${FONT};font-size:10pt;color:#444444;margin:18pt 0 4pt">${o.greet}</p>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10pt;border-top:1px solid #DDDDDD;padding-top:10pt">
-  <tr><td style="padding-top:10pt;${FONT};font-size:10pt;font-weight:700;color:#1A1A1A">${COMPANY.name}</td></tr>
-  <tr><td style="${FONT};font-size:9pt;color:#666666;line-height:1.7">
-    ${t(COMPANY.team.de, COMPANY.team.en)}<br>
-    ${COMPANY.street}, ${COMPANY.city}<br>
-    ${COMPANY.phone} &nbsp;|&nbsp; <a href="mailto:${COMPANY.mail}" style="color:#8B6914">${COMPANY.mail}</a><br>
-    <a href="https://${COMPANY.web}" style="color:#8B6914">${COMPANY.web}</a>
-  </td></tr>
-</table>
-
-</td></tr></table>
 </body></html>`;
 }
 
