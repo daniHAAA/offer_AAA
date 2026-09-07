@@ -467,7 +467,9 @@ function goTab(name) {
     document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
   });
   if (name === 'history') renderHistoryList();
-  if (name === 'group') renderGroupTermsSettings();
+  // Carry any values typed into the terms fields back into CONFIG before re-rendering
+  // them, otherwise leaving and re-entering the tab silently reverts unsaved edits.
+  if (name === 'group') { readGroupTermsFromDom(); renderGroupTermsSettings(); }
   if (name === 'settings') { document.getElementById('s-texts').innerHTML = ''; renderSettingsPanel(); }
 }
 
@@ -1031,7 +1033,7 @@ const GROUP_TEXT_FIELDS = [
   ['bikeSkiStorage', 'Bicycle and Ski Storage'],
   ['petsSmoking', 'Pets and Smoking'],
   ['pleaseNote', 'Please Note'],
-  ['cutOffDate', 'Cut-Off Date (Platzhalter {days} = Cut-off-Tage, siehe unten)'],
+  ['cutOffDate', 'Cut-Off Date (Platzhalter {days} = Cut-off-Tage aus dem Gruppenofferte-Tab)'],
   ['cancellationIntro', 'Stornobedingungen – Einleitungssatz (vor den Stufen)'],
   ['cancellationForceMajeure', 'Stornobedingungen – Force-Majeure-Klausel (nach den Stufen)'],
   ['paymentIntro', 'Zahlungsbedingungen – Einleitungssatz (vor dem Zahlungsplan)'],
@@ -1088,71 +1090,94 @@ function renderGroupTermsSettings() {
 }
 
 function addReductionTier() {
+  readGroupTermsFromDom();
   CONFIG.groupTerms.reductionTiers.push({ labelDe: '', labelEn: '', pct: 0 });
   renderGroupTermsSettings();
 }
 
 function removeReductionTier(i) {
   if (CONFIG.groupTerms.reductionTiers.length <= 1) return;
+  readGroupTermsFromDom();
   CONFIG.groupTerms.reductionTiers.splice(i, 1);
   renderGroupTermsSettings();
 }
 
 function addCancellationTier() {
+  readGroupTermsFromDom();
   CONFIG.groupTerms.cancellationTiers.push({ labelDe: '', labelEn: '', pct: 0, noteDe: '', noteEn: '' });
   renderGroupTermsSettings();
 }
 
 function removeCancellationTier(i) {
   if (CONFIG.groupTerms.cancellationTiers.length <= 1) return;
+  readGroupTermsFromDom();
   CONFIG.groupTerms.cancellationTiers.splice(i, 1);
   renderGroupTermsSettings();
 }
 
 function addPaymentTier() {
+  readGroupTermsFromDom();
   CONFIG.groupTerms.paymentPlan.push({ pct: 0, timingDe: '', timingEn: '' });
   renderGroupTermsSettings();
 }
 
 function removePaymentTier(i) {
   if (CONFIG.groupTerms.paymentPlan.length <= 1) return;
+  readGroupTermsFromDom();
   CONFIG.groupTerms.paymentPlan.splice(i, 1);
   renderGroupTermsSettings();
 }
 
+// Reads one numeric group-terms field. Missing input (panel not rendered yet) or a blank
+// field must keep the stored value instead of collapsing it to 0 - otherwise merely
+// opening the tab, or adding a tier, would silently zero every percentage.
+function readTermNumber(id, fallback) {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  const v = parseFloat(el.value);
+  return Number.isFinite(v) ? v : fallback;
+}
+
 // Reads the Cut-off/Storno/Zahlungsbedingungen fields from the DOM into CONFIG.groupTerms
-// and persists them, without any UI feedback. Used both by the manual save button and
-// automatically before generating a PDF, so generating always uses whatever is currently
-// typed in those fields without requiring a separate save step first.
-function persistGroupTerms() {
-  const cutoffEl = document.getElementById('gterm-cutoffdays');
-  if (cutoffEl) CONFIG.groupTerms.cutOffDays = parseInt(cutoffEl.value) || 0;
+// (in memory only). Safe to call when the panel has not been rendered yet: every field
+// falls back to the value already stored in CONFIG.
+function readGroupTermsFromDom() {
+  if (!CONFIG.groupTerms) CONFIG.groupTerms = JSON.parse(JSON.stringify(DEFAULT_CONFIG.groupTerms));
+
+  CONFIG.groupTerms.cutOffDays = Math.round(readTermNumber('gterm-cutoffdays', CONFIG.groupTerms.cutOffDays));
 
   CONFIG.groupTerms.reductionTiers = CONFIG.groupTerms.reductionTiers.map((r, i) => ({
     labelDe: document.getElementById('rt-labelDe-' + i)?.value ?? r.labelDe,
     labelEn: document.getElementById('rt-labelEn-' + i)?.value ?? r.labelEn,
-    pct: parseFloat(document.getElementById('rt-pct-' + i)?.value) || 0
+    pct: readTermNumber('rt-pct-' + i, r.pct)
   }));
 
   CONFIG.groupTerms.cancellationTiers = CONFIG.groupTerms.cancellationTiers.map((r, i) => ({
     labelDe: document.getElementById('ct-labelDe-' + i)?.value ?? r.labelDe,
     labelEn: document.getElementById('ct-labelEn-' + i)?.value ?? r.labelEn,
-    pct: parseFloat(document.getElementById('ct-pct-' + i)?.value) || 0,
+    pct: readTermNumber('ct-pct-' + i, r.pct),
     noteDe: document.getElementById('ct-noteDe-' + i)?.value ?? r.noteDe,
     noteEn: document.getElementById('ct-noteEn-' + i)?.value ?? r.noteEn
   }));
 
   CONFIG.groupTerms.paymentPlan = CONFIG.groupTerms.paymentPlan.map((p, i) => ({
-    pct: parseFloat(document.getElementById('pp-pct-' + i)?.value) || 0,
+    pct: readTermNumber('pp-pct-' + i, p.pct),
     timingDe: document.getElementById('pp-timingDe-' + i)?.value ?? p.timingDe,
     timingEn: document.getElementById('pp-timingEn-' + i)?.value ?? p.timingEn
   }));
+}
 
+// Reads the fields and persists them, without any UI feedback. Used both by the manual
+// save button and automatically before generating a PDF, so generating always uses
+// whatever is currently typed in those fields without requiring a separate save first.
+function persistGroupTerms() {
+  readGroupTermsFromDom();
   localStorage.setItem('aaa_cfg8', JSON.stringify(CONFIG));
 }
 
 function saveGroupTerms() {
   persistGroupTerms();
+  renderGroupTermsSettings();
   const ok = document.getElementById('gtermsavok');
   ok.style.display = 'flex';
   setTimeout(() => { ok.style.display = 'none'; }, 2500);
