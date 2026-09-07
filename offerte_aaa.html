@@ -1858,7 +1858,11 @@ function buildOutlookHtml(o) {
     (opts.extra || '');
 
   const spacer = h => `<tr><td height="${h}" style="height:${h}px;font-size:1px;line-height:1px">&nbsp;</td></tr>`;
-  const rule = (color, h) => `<tr><td height="${h}" bgcolor="${color}" style="height:${h}px;font-size:1px;line-height:1px;background-color:${color}">&nbsp;</td></tr>`;
+
+  // Hairlines are drawn as cell borders, never as a filled row: Word enforces a minimum
+  // height on a row that carries a background, so a "1px" coloured row came out as a
+  // heavy bar. Borders on a td are rendered at the width asked for.
+  const HAIRLINE = { gold: '1px solid #B99A47', soft: '1px solid #E5E5E5', total: '1px solid #BBBBBB', sign: '1px solid #DDDDDD' };
 
   const itemRow = r => {
     const strike = r.kind === 'strike';
@@ -1873,13 +1877,21 @@ function buildOutlookHtml(o) {
   };
 
   const headCell = (w, align, text) =>
-    `<td width="${w}" align="${align}" style="width:${w}px;padding:0 8px 5px;${font(8, '#999999', { lh: 10 })}"><b>${text}</b></td>`;
+    `<td width="${w}" align="${align}" style="width:${w}px;padding:0 8px 6px;border-bottom:${HAIRLINE.soft};${font(8, '#999999', { lh: 10 })}"><b>${text}</b></td>`;
 
   const option = room => `<table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
-  ${room.caption ? `<tr><td style="padding:0 0 3px;${font(8, '#8B6914', { lh: 10 })}"><b>${room.caption.toUpperCase()}</b></td></tr>` : ''}
-  <tr><td style="padding:0 0 6px;${font(13, '#1A1A1A', { lh: 17 })}"><b>${room.title}</b>&nbsp;&nbsp;<span style="${font(8, '#8B6914', { lh: 17 })}">${room.rate}</span></td></tr>
-  ${rule('#8B6914', 2)}
-  ${spacer(10)}
+  ${room.caption ? `<tr><td style="padding:0 0 4px;${font(8, '#8B6914', { lh: 10 })}"><b>${room.caption.toUpperCase()}</b></td></tr>` : ''}
+  <tr><td style="padding:0 0 7px;border-bottom:${HAIRLINE.gold}">
+    <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse"><tr>
+      <td style="${font(16, '#1A1A1A', { lh: 21 })}"><b>${room.title}</b></td>
+      <td align="right" style="padding-left:10px">
+        <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>
+          <td bgcolor="#FAF5E8" style="padding:4px 9px;border:1px solid #E8D5A0;background-color:#FAF5E8;${font(8.5, '#8B6914', { lh: 11, extra: 'white-space:nowrap;' })}"><b>${room.rate}</b></td>
+        </tr></table>
+      </td>
+    </tr></table>
+  </td></tr>
+  ${spacer(12)}
   <tr><td style="padding:0">
     <table width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:${WIDTH}px;border-collapse:collapse">
       <tr>
@@ -1887,12 +1899,10 @@ function buildOutlookHtml(o) {
         ${headCell(Math.round(WIDTH * 0.38), 'left', 'Details')}
         ${headCell(Math.round(WIDTH * 0.25), 'right', t('Betrag', 'Amount'))}
       </tr>
-      <tr><td colspan="3" height="1" bgcolor="#DDDDDD" style="height:1px;font-size:1px;line-height:1px;background-color:#DDDDDD">&nbsp;</td></tr>
       ${room.rows.map(itemRow).join('')}
-      <tr><td colspan="3" height="2" bgcolor="#AAAAAA" style="height:2px;font-size:1px;line-height:1px;background-color:#AAAAAA">&nbsp;</td></tr>
       <tr>
-        <td colspan="2" style="padding:9px 8px 4px;${font(11, '#1A1A1A', { lh: 15 })}"><b>${t('Gesamtbetrag', 'Total')}</b></td>
-        <td align="right" style="padding:9px 8px 4px;${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${room.total}</b></td>
+        <td colspan="2" style="padding:10px 8px 4px;border-top:${HAIRLINE.total};${font(11, '#1A1A1A', { lh: 15 })}"><b>${t('Gesamtbetrag', 'Total')}</b></td>
+        <td align="right" style="padding:10px 8px 4px;border-top:${HAIRLINE.total};${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${room.total}</b></td>
       </tr>
     </table>
   </td></tr>
@@ -1916,10 +1926,9 @@ function buildOutlookHtml(o) {
         <td style="padding:5px 0;${font(9, '#888888')}">${r.detail}</td>
         <td align="right" style="padding:5px 0;${font(10, '#1A1A1A', { extra: 'white-space:nowrap;' })}">${r.amount}</td>
       </tr>`).join('')}
-      <tr><td colspan="3" height="1" bgcolor="#8B6914" style="height:1px;font-size:1px;line-height:1px;background-color:#8B6914">&nbsp;</td></tr>
       <tr>
-        <td colspan="2" style="padding:8px 0 2px;${font(11, '#1A1A1A', { lh: 15 })}"><b>${o.grand.label}</b></td>
-        <td align="right" style="padding:8px 0 2px;${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${o.grand.total}</b></td>
+        <td colspan="2" style="padding:9px 0 2px;border-top:${HAIRLINE.gold};${font(11, '#1A1A1A', { lh: 15 })}"><b>${o.grand.label}</b></td>
+        <td align="right" style="padding:9px 0 2px;border-top:${HAIRLINE.gold};${font(11, '#1A1A1A', { lh: 15, extra: 'white-space:nowrap;' })}"><b>${o.grand.total}</b></td>
       </tr>
     </table>
   </td></tr>
@@ -1964,10 +1973,8 @@ ${para(o.valid, 10, '#444444', 14)}
 ${outro}
 ${o.nrfHint ? para(o.nrfHint, 10, '#1A1A1A', 12) : ''}
 
-${para(o.greet, 10, '#444444', 14)}
-${rule('#DDDDDD', 1)}
-${spacer(10)}
-<tr><td style="padding:0 0 2px;${font(10, '#1A1A1A', { lh: 15 })}"><b>${COMPANY.name}</b></td></tr>
+${para(o.greet, 10, '#444444', 16)}
+<tr><td style="padding:14px 0 2px;border-top:${HAIRLINE.sign};${font(10, '#1A1A1A', { lh: 15 })}"><b>${COMPANY.name}</b></td></tr>
 <tr><td style="${font(9, '#666666', { lh: 15 })}">${t(COMPANY.team.de, COMPANY.team.en)}</td></tr>
 <tr><td style="${font(9, '#666666', { lh: 15 })}">${COMPANY.street}, ${COMPANY.city}</td></tr>
 <tr><td style="${font(9, '#666666', { lh: 15 })}">${COMPANY.phone} &nbsp;|&nbsp; <a href="mailto:${COMPANY.mail}" style="color:#8B6914">${COMPANY.mail}</a></td></tr>
