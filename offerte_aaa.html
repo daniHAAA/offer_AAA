@@ -2186,17 +2186,18 @@ ${blocksHtml}
 // inherit them), and mso-line-height-rule for predictable leading.
 function buildOutlookHtml(o) {
   const t = (de, en) => lang === 'de' ? de : en;
-  // Outlook Classic cannot load web fonts, so the serif look has to come from fonts that
-  // are already on the machine. Georgia is the one that matches the house style closest.
-  const SERIF = "Georgia,'Times New Roman',Times,serif";
-  const SANS = "'Segoe UI',Arial,Helvetica,sans-serif";
+  // Outlook Classic cannot load web fonts, so both faces have to be ones that are already
+  // on the machine. The letter is set in Arial, matching the PDF; only the wordmark in the
+  // band keeps the serif, and Georgia is the installed face closest to the house style.
+  const BODY = "Arial,Helvetica,sans-serif";
+  const DISPLAY = "Georgia,'Times New Roman',Times,serif";
   const WIDTH = 640;
   const PAD = 30;
   const INNER = WIDTH - PAD * 2;
   const INK = '#1F1B16', MUTED = '#7A736A', GOLD = '#8B6914', BAND = '#3B332C', PAGE = '#EFEEEC';
 
   const font = (size, color, opts = {}) =>
-    `font-family:${opts.sans ? SANS : SERIF};font-size:${size}pt;color:${color};` +
+    `font-family:${opts.display ? DISPLAY : BODY};font-size:${size}pt;color:${color};` +
     `mso-line-height-rule:exactly;line-height:${opts.lh || Math.round(size * 1.55)}pt;` +
     (opts.extra || '');
 
@@ -2215,16 +2216,16 @@ function buildOutlookHtml(o) {
   };
 
   const headCell = (w, align, text) =>
-    `<td width="${w}" align="${align}" style="width:${w}px;padding:0 6px 6px;border-bottom:${HAIRLINE.soft};${font(7.5, MUTED, { sans: true, lh: 10, extra: 'letter-spacing:1px;text-transform:uppercase;' })}"><b>${text}</b></td>`;
+    `<td width="${w}" align="${align}" style="width:${w}px;padding:0 6px 6px;border-bottom:${HAIRLINE.soft};${font(7.5, MUTED, { lh: 10, extra: 'letter-spacing:1px;text-transform:uppercase;' })}"><b>${text}</b></td>`;
 
   const option = room => `<table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse">
-  ${room.caption ? `<tr><td style="padding:0 0 5px;${font(7.5, GOLD, { sans: true, lh: 10, extra: 'letter-spacing:1.5px;text-transform:uppercase;' })}"><b>${room.caption}</b></td></tr>` : ''}
+  ${room.caption ? `<tr><td style="padding:0 0 5px;${font(7.5, GOLD, { lh: 10, extra: 'letter-spacing:1.5px;text-transform:uppercase;' })}"><b>${room.caption}</b></td></tr>` : ''}
   <tr><td style="padding:0 0 8px;border-bottom:${HAIRLINE.gold}">
     <table width="${INNER}" cellpadding="0" cellspacing="0" border="0" style="width:${INNER}px;border-collapse:collapse"><tr>
       <td style="${font(17, INK, { lh: 22 })}">${room.title}</td>
       <td align="right" style="padding-left:10px">
         <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>
-          <td bgcolor="#FAF5E8" style="padding:4px 9px;border:1px solid #E8D5A0;background-color:#FAF5E8;${font(8, GOLD, { sans: true, lh: 11, extra: 'letter-spacing:1px;white-space:nowrap;' })}"><b>${room.rate}</b></td>
+          <td bgcolor="#FAF5E8" style="padding:4px 9px;border:1px solid #E8D5A0;background-color:#FAF5E8;${font(8, GOLD, { lh: 11, extra: 'letter-spacing:1px;white-space:nowrap;' })}"><b>${room.rate}</b></td>
         </tr></table>
       </td>
     </tr></table>
@@ -2297,8 +2298,8 @@ function buildOutlookHtml(o) {
 
   <tr><td bgcolor="${BAND}" style="background-color:${BAND};padding:26px 20px">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
-      <tr><td align="center" style="padding:0 0 4px;text-align:center;${font(8.5, '#D9CDB8', { lh: 13, extra: 'letter-spacing:3px;text-transform:uppercase;' })}">Andermatt</td></tr>
-      <tr><td align="center" style="text-align:center;${font(19, '#FFFFFF', { lh: 25 })}">Alpine Apartments</td></tr>
+      <tr><td align="center" style="padding:0 0 4px;text-align:center;${font(8.5, '#D9CDB8', { display: true, lh: 13, extra: 'letter-spacing:3px;text-transform:uppercase;' })}">Andermatt</td></tr>
+      <tr><td align="center" style="text-align:center;${font(19, '#FFFFFF', { display: true, lh: 25 })}">Alpine Apartments</td></tr>
     </table>
   </td></tr>
   ${banner}
