@@ -342,11 +342,11 @@ const DEFAULT_CONFIG = {
     { id: 'eci', lDe: 'Early Check-in', lEn: 'Early check-in', price: 88, perNight: false, comp: false, qty: false },
     { id: 'lco', lDe: 'Late Check-out', lEn: 'Late check-out', price: 88, perNight: false, comp: false, qty: false },
     { id: 'sc', lDe: 'Soft Cleaning', lEn: 'Soft cleaning', price: 65, perNight: false, comp: false, qty: true },
-    { id: 'zr-studio', lDe: 'Zwischenreinigung Studio', lEn: 'Mid-stay cleaning Studio', price: 80, perNight: false, comp: false, qty: true, qtyMax: 10 },
-    { id: 'zr-1br', lDe: 'Zwischenreinigung 1-Bedroom', lEn: 'Mid-stay cleaning 1-Bedroom', price: 80, perNight: false, comp: false, qty: true, qtyMax: 10 },
-    { id: 'zr-2br', lDe: 'Zwischenreinigung 2-Bedroom', lEn: 'Mid-stay cleaning 2-Bedroom', price: 110, perNight: false, comp: false, qty: true, qtyMax: 10 },
-    { id: 'zr-3br', lDe: 'Zwischenreinigung 3-Bedroom', lEn: 'Mid-stay cleaning 3-Bedroom', price: 160, perNight: false, comp: false, qty: true, qtyMax: 10 },
-    { id: 'zr-4br', lDe: 'Zwischenreinigung 4-Bedroom', lEn: 'Mid-stay cleaning 4-Bedroom', price: 195, perNight: false, comp: false, qty: true, qtyMax: 10 }
+    { id: 'zr-studio', lDe: 'Zwischenreinigung Studio', lEn: 'Mid-stay cleaning Studio', price: 80, perNight: false, comp: false, qty: true },
+    { id: 'zr-1br', lDe: 'Zwischenreinigung 1-Bedroom', lEn: 'Mid-stay cleaning 1-Bedroom', price: 80, perNight: false, comp: false, qty: true },
+    { id: 'zr-2br', lDe: 'Zwischenreinigung 2-Bedroom', lEn: 'Mid-stay cleaning 2-Bedroom', price: 110, perNight: false, comp: false, qty: true },
+    { id: 'zr-3br', lDe: 'Zwischenreinigung 3-Bedroom', lEn: 'Mid-stay cleaning 3-Bedroom', price: 160, perNight: false, comp: false, qty: true },
+    { id: 'zr-4br', lDe: 'Zwischenreinigung 4-Bedroom', lEn: 'Mid-stay cleaning 4-Bedroom', price: 195, perNight: false, comp: false, qty: true }
   ],
   texts: {
     introDe: 'Vielen Dank für Ihr Interesse an einem Aufenthalt in den Andermatt Alpine Apartments. Es freut uns sehr, Ihnen das folgende Angebot unterbreiten zu dürfen.',
@@ -792,8 +792,11 @@ function renderExtrasChecklist({ keepSelection = false, keepPrices = false } = {
   c.innerHTML = CONFIG.extras.map(ex => {
     const label = lang === 'de' ? ex.lDe : ex.lEn;
     const hint = ex.comp ? (lang === 'de' ? 'Kostenlos' : 'Complimentary') : ex.perNight ? `CHF ${ex.price}${lang === 'de' ? '/Nacht' : '/night'}` : `CHF ${ex.price}`;
-    const qtyMax = ex.qtyMax || 5;
-    const qty = ex.qty ? `<select id="xq-${ex.id}" style="width:55px">${Array.from({ length: qtyMax }, (_, n) => n + 1).map(n => `<option>${n}</option>`).join('')}</select>` : '';
+    // Ten is the ceiling for every service that can be counted; a single extra can still
+    // be capped lower in the config, which is why this is a fallback rather than a fixed
+    // number here.
+    const qtyMax = ex.qtyMax || 10;
+    const qty = ex.qty ? `<select id="xq-${ex.id}" style="width:66px">${Array.from({ length: qtyMax }, (_, n) => n + 1).map(n => `<option>${n}</option>`).join('')}</select>` : '';
     const price = !ex.comp ? `<input type="number" id="xp-${ex.id}" value="${ex.price}" style="width:72px" min="0">` : '';
     return `<div class="crow"><input type="checkbox" id="x-${ex.id}"><label for="x-${ex.id}">${label} <span class="ph">(${hint})</span></label>${qty}${price}</div>`;
   }).join('');
