@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf-toolkit"
+version = "1.0.0"
+description = "Lokales PDF-Werkzeug: zusammenfügen, teilen, organisieren, bearbeiten, Formulare, PDF nach Word"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "pypdf>=5.1",
+    "cryptography>=42.0",
+    "pymupdf>=1.24",
+    "flask>=3.0",
+]
+
+[project.optional-dependencies]
+word = ["pdf2docx>=0.5.8"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+pdftoolkit = "pdftoolkit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pdftoolkit*"]
+
+[tool.setuptools.package-data]
+pdftoolkit = ["templates/*.html", "static/css/*.css", "static/js/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "tests"]

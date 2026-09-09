@@ -1,0 +1,11 @@
+# Kern -- ohne diese läuft nichts
+pypdf>=5.1              # Struktur: zusammenfügen, teilen, Seiten, Verschlüsselung
+cryptography>=42.0      # von pypdf für AES-256 gebraucht
+pymupdf>=1.24           # Rendern, Bearbeiten, Formulare, Text
+flask>=3.0              # Weboberfläche
+
+# Optional -- nur für den Word-Export nötig
+pdf2docx>=0.5.8
+
+# Nur für die Tests
+pytest>=8.0
