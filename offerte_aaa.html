@@ -2385,6 +2385,106 @@ function buildOfferPlainText(o) {
   return lines.join('\n');
 }
 
+// Builds a compact, plain table with just the figures a colleague needs internally
+// (room, rate, price/night, cleaning fee, total) - unlike buildOutlookHtml(), which is
+// the full branded guest-facing letter also used for the .eml draft. Kept deliberately
+// separate: simplifying this one must never change what mkEml()/mkPDF() send to guests.
+function buildInternalOfferHtml(o) {
+  const t = (de, en) => lang === 'de' ? de : en;
+  const note = document.getElementById('inote').value.trim();
+  const discount = getSelectedDiscount();
+  const stays = o.rooms.map((_, i) => roomStay(i));
+  const mixedStay = stays.some(s => s.own);
+  const roomPricing = o.rooms.map((_, i) => computeRoomPricing(i, stays[i], discount));
+  const extrasOnEveryRoom = mode === 'compare';
+  const roomExtrasTotal = roomPricing.map((_, i) => (extrasOnEveryRoom || i === 0)
+    ? getSelectedExtras(stays[i].nights).reduce((s, e) => s + e.amt, 0)
+    : 0);
+  const roomTotals = roomPricing.map((r, i) => r.tot + roomExtrasTotal[i]);
+  // In "compare" mode the rooms are alternatives, not a combined booking, so summing
+  // their prices into one grand total would be misleading - only shown for a single
+  // room or an actual multi-booking (matches the rule used for the real grand total).
+  const showGrandTotal = mode === 'multi' || roomPricing.length === 1;
+  const totalAll = roomTotals.reduce((s, x) => s + x, 0);
+  // A single "Extras" summary line only means something when there's one shared figure -
+  // in compare mode with several rooms each already carries its own extras in its total.
+  const showExtrasLine = !(mode === 'compare' && roomPricing.length > 1) && roomExtrasTotal[0] > 0;
+
+  const font = (size, color, extra = '') => `font-family:Arial,Helvetica,sans-serif;font-size:${size}pt;color:${color};${extra}`;
+  const cell = (align, extra = '') => `padding:6pt 10pt;border-bottom:1pt solid #EEEEEE;${align ? `text-align:${align};` : ''}${extra}`;
+
+  const headerLine = mixedStay
+    ? `Offerte Nr. ${o.nr} – ${o.guest} (${t('Zeiträume je Apartment unterschiedlich', 'periods vary per apartment')})`
+    : `Offerte Nr. ${o.nr} – ${o.guest} – ${o.arrival} → ${o.departure} (${o.nights} ${t('Nächte', 'nights')})`;
+
+  const rowsHtml = roomPricing.map((r, i) => `<tr>
+    <td style="${cell('left')}"><font style="${font(10, '#1a1a1a')}">${r.fullCat}</font></td>
+    <td style="${cell('left')}"><font style="${font(10, '#1a1a1a')}">${r.rate}</font></td>
+    ${mixedStay ? `<td style="${cell('left')}"><font style="${font(10, '#1a1a1a')}">${formatDate(stays[i].arrival)} → ${formatDate(stays[i].departure)}</font></td>` : ''}
+    <td style="${cell('right', 'white-space:nowrap;')}"><font style="${font(10, '#1a1a1a')}">${formatCurrency(r.pn)}</font></td>
+    <td style="${cell('right', 'white-space:nowrap;')}"><font style="${font(10, '#1a1a1a')}">${formatCurrency(r.cl)}</font></td>
+    <td style="${cell('right', 'white-space:nowrap;')}"><font style="${font(10, '#1a1a1a')}"><b>${formatCurrency(roomTotals[i])}</b></font></td>
+  </tr>`).join('');
+
+  const headCell = (label, align) => `<td style="padding:6pt 10pt;${align ? `text-align:${align};` : ''}"><font style="${font(8, '#666666')}"><b>${label}</b></font></td>`;
+
+  return `<html><head><meta charset="UTF-8"></head><body style="margin:0;padding:12pt;font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#1a1a1a">
+
+<font style="${font(10, '#1a1a1a')}"><b>${headerLine}</b></font><br><br>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%">
+  <tr bgcolor="#EFEFEF">
+    ${headCell(t('ZIMMER', 'ROOM'))}
+    ${headCell('RATE')}
+    ${mixedStay ? headCell(t('ZEITRAUM', 'PERIOD')) : ''}
+    ${headCell(t('PREIS/NACHT', 'PRICE/NIGHT'), 'right')}
+    ${headCell(t('REINIGUNG', 'CLEANING'), 'right')}
+    ${headCell('TOTAL', 'right')}
+  </tr>
+  ${rowsHtml}
+</table>
+<br>
+
+${showExtrasLine ? `<font style="${font(10, '#1a1a1a')}">Extras: ${formatCurrency(roomExtrasTotal[0])}</font><br>` : ''}
+${showGrandTotal ? `<font style="${font(10, '#1a1a1a')}"><b>${t('Gesamtbetrag', 'Total')}: ${formatCurrency(totalAll)}</b></font><br>` : ''}
+${note ? `<font style="${font(10, '#1a1a1a')}">${t('Notiz', 'Note')}: ${note}</font><br>` : ''}
+
+</body></html>`;
+}
+
+function buildInternalOfferPlainText(o) {
+  const t = (de, en) => lang === 'de' ? de : en;
+  const note = document.getElementById('inote').value.trim();
+  const discount = getSelectedDiscount();
+  const stays = o.rooms.map((_, i) => roomStay(i));
+  const mixedStay = stays.some(s => s.own);
+  const roomPricing = o.rooms.map((_, i) => computeRoomPricing(i, stays[i], discount));
+  const extrasOnEveryRoom = mode === 'compare';
+  const roomExtrasTotal = roomPricing.map((_, i) => (extrasOnEveryRoom || i === 0)
+    ? getSelectedExtras(stays[i].nights).reduce((s, e) => s + e.amt, 0)
+    : 0);
+  const roomTotals = roomPricing.map((r, i) => r.tot + roomExtrasTotal[i]);
+  const showGrandTotal = mode === 'multi' || roomPricing.length === 1;
+  const showExtrasLine = !(mode === 'compare' && roomPricing.length > 1) && roomExtrasTotal[0] > 0;
+
+  const headerLine = mixedStay
+    ? `Offerte Nr. ${o.nr} – ${o.guest} (${t('Zeiträume je Apartment unterschiedlich', 'periods vary per apartment')})`
+    : `Offerte Nr. ${o.nr} – ${o.guest} – ${o.arrival} → ${o.departure} (${o.nights} ${t('Nächte', 'nights')})`;
+
+  return [
+    headerLine, '',
+    ...roomPricing.map((r, i) => [
+      r.fullCat, r.rate,
+      ...(mixedStay ? [`${formatDate(stays[i].arrival)} → ${formatDate(stays[i].departure)}`] : []),
+      formatCurrency(r.pn), formatCurrency(r.cl), formatCurrency(roomTotals[i])
+    ].join('\t')),
+    '',
+    ...(showExtrasLine ? [`Extras: ${formatCurrency(roomExtrasTotal[0])}`] : []),
+    ...(showGrandTotal ? [`${t('Gesamtbetrag', 'Total')}: ${formatCurrency(roomTotals.reduce((s, x) => s + x, 0))}`] : []),
+    ...(note ? [`${t('Notiz', 'Note')}: ${note}`] : [])
+  ].join('\n');
+}
+
 function copyOut() {
   if (!lastOffer) return;
 
@@ -2394,8 +2494,8 @@ function copyOut() {
     setTimeout(() => { label.textContent = lang === 'de' ? 'Kopieren (einfaches Format)' : 'Copy (plain format)'; }, 2500);
   };
 
-  const html = buildOutlookHtml(lastOffer);
-  const text = buildOfferPlainText(lastOffer);
+  const html = buildInternalOfferHtml(lastOffer);
+  const text = buildInternalOfferPlainText(lastOffer);
 
   navigator.clipboard.write([new ClipboardItem({
     'text/html': new Blob([html], { type: 'text/html' }),
